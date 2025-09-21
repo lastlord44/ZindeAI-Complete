@@ -1,2 +1,1 @@
-# ZindeAI
-Türk mutfağına özel akıllı beslenme planlama sistemi
+# ZindeAI - Akilli Beslenme ve Antrenman Planlayicisi 
