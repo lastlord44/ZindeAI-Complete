@@ -39,11 +39,15 @@ class _ProfileScreenState extends State<ProfileScreen> {
   @override
   void initState() {
     super.initState();
-    // Varsayılan değerleri hemen set et
+    // Önce controller'lara değer ata
     _ageController.text = '25';
     _heightController.text = '170';
     _weightController.text = '70';
-    _loadProfile(); // Sonra profili yükle
+
+    // Sonra profili yükle (varsa üzerine yazacak)
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _loadProfile();
+    });
   }
 
   Future<void> _loadProfile() async {

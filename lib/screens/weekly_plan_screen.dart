@@ -6,6 +6,7 @@ import '../models/workout_plan.dart';
 import '../models/meal_plan.dart';
 import '../widgets/loading_widget.dart';
 import '../widgets/error_widget.dart' as app;
+import 'meal_tracker_screen.dart';
 
 class WeeklyPlanScreen extends StatefulWidget {
   final UserProfile profile;
@@ -190,6 +191,21 @@ class _WeeklyPlanScreenState extends State<WeeklyPlanScreen>
           indicatorColor: Colors.white,
         ),
       ),
+      floatingActionButton: _mealPlan != null
+          ? FloatingActionButton.extended(
+              onPressed: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (_) => MealTrackerScreen(mealPlan: _mealPlan!),
+                  ),
+                );
+              },
+              icon: const Icon(Icons.restaurant_menu),
+              label: const Text('Öğün Takibi'),
+              backgroundColor: Colors.orange,
+            )
+          : null,
       body: TabBarView(
         controller: _tabController,
         children: [
@@ -210,7 +226,7 @@ class _WeeklyPlanScreenState extends State<WeeklyPlanScreen>
                         _loadWorkoutPlan(context.read<ApiService>());
                       },
                     ))
-                  : _workoutPlan != null 
+                  : _workoutPlan != null
                       ? _WorkoutPlanView(plan: _workoutPlan!)
                       : const Center(child: Text('Antrenman planı bulunamadı')),
 
@@ -231,7 +247,7 @@ class _WeeklyPlanScreenState extends State<WeeklyPlanScreen>
                         _loadMealPlan(context.read<ApiService>());
                       },
                     ))
-                  : _mealPlan != null 
+                  : _mealPlan != null
                       ? _MealPlanView(plan: _mealPlan!)
                       : const Center(child: Text('Beslenme planı bulunamadı')),
         ],
@@ -361,7 +377,8 @@ class _DayCard extends StatelessWidget {
                       decoration: BoxDecoration(
                         color: Colors.grey[50],
                         borderRadius: BorderRadius.circular(8),
-                        border: Border.all(color: Colors.grey[300] ?? Colors.grey),
+                        border:
+                            Border.all(color: Colors.grey[300] ?? Colors.grey),
                       ),
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
@@ -386,7 +403,8 @@ class _DayCard extends StatelessWidget {
                           Text(
                             'Hedef Kas: ${exercise.targetMuscle}',
                             style: TextStyle(
-                                color: Colors.grey[600] ?? Colors.grey, fontSize: 12),
+                                color: Colors.grey[600] ?? Colors.grey,
+                                fontSize: 12),
                           ),
                           const SizedBox(height: 8),
                           Row(
@@ -398,12 +416,14 @@ class _DayCard extends StatelessWidget {
                               const SizedBox(width: 8),
                               Chip(
                                 label: Text('${exercise.reps} tekrar'),
-                                backgroundColor: Colors.green[50] ?? Colors.green,
+                                backgroundColor:
+                                    Colors.green[50] ?? Colors.green,
                               ),
                               const SizedBox(width: 8),
                               Chip(
                                 label: Text('${exercise.rest}s dinlenme'),
-                                backgroundColor: Colors.orange[50] ?? Colors.orange,
+                                backgroundColor:
+                                    Colors.orange[50] ?? Colors.orange,
                               ),
                             ],
                           ),
@@ -650,7 +670,8 @@ class _MealCard extends StatelessWidget {
                     padding: const EdgeInsets.only(bottom: 6),
                     child: Row(
                       children: [
-                        Icon(Icons.circle, size: 8, color: Colors.grey[400] ?? Colors.grey),
+                        Icon(Icons.circle,
+                            size: 8, color: Colors.grey[400] ?? Colors.grey),
                         const SizedBox(width: 8),
                         Expanded(
                           child: RichText(
@@ -829,7 +850,8 @@ class _MacroItem extends StatelessWidget {
         const SizedBox(height: 2),
         Text(
           label,
-          style: TextStyle(fontSize: 12, color: Colors.grey.shade600 ?? Colors.grey),
+          style: TextStyle(
+              fontSize: 12, color: Colors.grey.shade600 ?? Colors.grey),
         ),
       ],
     );

@@ -42,11 +42,11 @@ class ApiService {
     Map<String, dynamic>? preferences,
   }) async {
     try {
-      print('Creating meal plan:');
+      print('7 GÜNLÜK PLAN İSTENİYOR!');
       print('Calories: $calories');
       print('Goal: $goal');
       print('Diet: $diet');
-      print('Days: $daysPerWeek');
+      print('Days: 7 (HER ZAMAN 7!)');
       print('Preferences: $preferences');
 
       // TÜM İSTEKLER ARTIK '/zindeai-router' ENDPOINT'İNE GİDECEK
@@ -55,7 +55,7 @@ class ApiService {
         'calories': calories,
         'goal': goal,
         'diet': diet,
-        'daysPerWeek': daysPerWeek,
+        'daysPerWeek': 7, // HER ZAMAN 7 GÖNDER!
         'preferences': preferences ?? {},
       });
 

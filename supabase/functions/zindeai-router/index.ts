@@ -57,10 +57,12 @@ function cleanAndParseJson(text: string) {
 
 function createPrompt(endpoint: string, body: any): string {
     if (endpoint === 'plan') {
-        const { calories, goal, daysPerWeek } = body;
+        const { calories, goal } = body;
+        // HER ZAMAN 7 GÜN!
+        const daysPerWeek = 7;
         return `
           Sen bir Türk uzman diyetisyensin. Sadece JSON formatında cevap ver. Asla açıklama ekleme.
-          Kullanıcı ${daysPerWeek} günlük, yaklaşık ${calories} kalorilik, "${goal}" amaçlı bir plan istiyor.
+          Kullanıcı 7 günlük, yaklaşık ${calories} kalorilik, "${goal}" amaçlı bir plan istiyor.
           
           ZORUNLU JSON FORMATI:
           { "planTitle": "string", "summary": "string", "dailyPlan": [ { "day": "string", "meals": [ { "mealName": "string", "items": [ { "itemName": "string", "quantity": "int", "unit": "string", "calories": "int", "protein": "int", "carbs": "int", "fat": "int" } ] } ] } ] }
