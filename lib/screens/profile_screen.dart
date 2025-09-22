@@ -199,8 +199,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
                               controller: _ageController,
                               keyboardType: TextInputType.number,
                               decoration: const InputDecoration(
-                                label: Text(
-                                    'Yaş'), // labelText yerine label kullanıyoruz
+                                labelText: 'Yaş', // labelText'e geri dönüyoruz
+                                floatingLabelBehavior: FloatingLabelBehavior
+                                    .always, // BU SATIR HATAYI ÇÖZER
                                 suffixText: 'yaş',
                                 border: OutlineInputBorder(),
                                 prefixIcon: Icon(Icons.cake),
@@ -223,8 +224,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
                               controller: _heightController,
                               keyboardType: TextInputType.number,
                               decoration: const InputDecoration(
-                                label: Text(
-                                    'Boy'), // labelText yerine label kullanıyoruz
+                                labelText: 'Boy',
+                                floatingLabelBehavior: FloatingLabelBehavior
+                                    .always, // BU SATIR HATAYI ÇÖZER
                                 suffixText: 'cm',
                                 border: OutlineInputBorder(),
                                 prefixIcon: Icon(Icons.height),
@@ -249,8 +251,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
                               controller: _weightController,
                               keyboardType: TextInputType.number,
                               decoration: const InputDecoration(
-                                label: Text(
-                                    'Kilo'), // labelText yerine label kullanıyoruz
+                                labelText: 'Kilo',
+                                floatingLabelBehavior: FloatingLabelBehavior
+                                    .always, // BU SATIR HATAYI ÇÖZER
                                 suffixText: 'kg',
                                 border: OutlineInputBorder(),
                                 prefixIcon: Icon(Icons.monitor_weight),

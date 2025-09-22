@@ -498,17 +498,9 @@ class _MealPlanView extends StatelessWidget {
           ),
           const SizedBox(height: 16),
 
-          // Yeni dailyPlan formatı varsa göster, yoksa eski formatları kontrol et
-          if (plan.dailyPlan != null && plan.dailyPlan!.isNotEmpty) ...[
-            // YENİ: dailyPlan formatı
-            ...plan.dailyPlan!.map((day) => _DailyPlanCard(day: day)),
-          ] else if (plan.weeklyPlan != null &&
-              plan.weeklyPlan!.isNotEmpty) ...[
-            // Eski: weeklyPlan formatı
-            ...plan.weeklyPlan!.map((day) => _WeeklyDayCard(day: day)),
-          ] else if (plan.meals.isNotEmpty) ...[
-            // Fallback: meals formatı
-            ...plan.meals.map((meal) => _MealCard(meal: meal)),
+          // Sadece dailyPlan formatını kullan
+          if (plan.dailyPlan.isNotEmpty) ...[
+            ...plan.dailyPlan.map((day) => _DailyPlanCard(day: day)),
           ] else ...[
             // Hiç plan yoksa
             const Card(
@@ -581,39 +573,28 @@ class _MealCard extends StatelessWidget {
   final Meal meal;
   const _MealCard({required this.meal});
 
-  IconData _getMealIcon(String type) {
-    switch (type.toLowerCase()) {
-      case 'breakfast':
-        return Icons.breakfast_dining;
-      case 'lunch':
-        return Icons.lunch_dining;
-      case 'dinner':
-        return Icons.dinner_dining;
-      case 'snack':
-        return Icons.cookie;
-      default:
-        return Icons.restaurant;
-    }
+  IconData _getMealIcon(String name) {
+    name = name.toLowerCase();
+    if (name.contains('kahvaltı')) return Icons.breakfast_dining;
+    if (name.contains('öğle')) return Icons.lunch_dining;
+    if (name.contains('akşam')) return Icons.dinner_dining;
+    if (name.contains('ara')) return Icons.cookie;
+    return Icons.restaurant;
   }
 
-  Color _getMealColor(String type) {
-    switch (type.toLowerCase()) {
-      case 'breakfast':
-        return Colors.orange;
-      case 'lunch':
-        return Colors.blue;
-      case 'dinner':
-        return Colors.purple;
-      case 'snack':
-        return Colors.green;
-      default:
-        return Colors.grey;
-    }
+  Color _getMealColor(String name) {
+    name = name.toLowerCase();
+    if (name.contains('kahvaltı')) return Colors.orange;
+    if (name.contains('öğle')) return Colors.blue;
+    if (name.contains('akşam')) return Colors.purple;
+    if (name.contains('ara')) return Colors.green;
+    return Colors.grey;
   }
 
   @override
   Widget build(BuildContext context) {
-    final mealColor = _getMealColor(meal.type);
+    final mealColor =
+        _getMealColor(meal.name); // 'type' yerine 'name' kullanıyoruz
     return Card(
       margin: const EdgeInsets.only(bottom: 12),
       child: Container(
@@ -630,10 +611,11 @@ class _MealCard extends StatelessWidget {
             children: [
               Row(
                 children: [
-                  Icon(_getMealIcon(meal.type), color: mealColor),
+                  Icon(_getMealIcon(meal.name),
+                      color: mealColor), // 'type' yerine 'name'
                   const SizedBox(width: 8),
                   Text(
-                    meal.name,
+                    meal.name, // 'name' alanı
                     style: const TextStyle(
                       fontSize: 22,
                       fontWeight: FontWeight.bold,
@@ -648,7 +630,7 @@ class _MealCard extends StatelessWidget {
                       borderRadius: BorderRadius.circular(12),
                     ),
                     child: Text(
-                      '${meal.calories} kcal',
+                      '${meal.totalCalories} kcal', // 'calories' yerine yeni 'totalCalories' getter'ı
                       style: TextStyle(
                         color: mealColor,
                         fontWeight: FontWeight.bold,
@@ -658,123 +640,91 @@ class _MealCard extends StatelessWidget {
                   ),
                 ],
               ),
-              const SizedBox(height: 12),
-              // Yeni format: ingredients varsa onu göster, yoksa eski items'ı göster
-              if (meal.ingredients != null && meal.ingredients!.isNotEmpty) ...[
-                ...meal.ingredients!.map((ingredient) => Padding(
-                      padding: const EdgeInsets.only(bottom: 6),
-                      child: Row(
-                        children: [
-                          Icon(Icons.circle, size: 8, color: Colors.grey[400]),
-                          const SizedBox(width: 8),
-                          Expanded(
-                            child: RichText(
-                              text: TextSpan(
-                                style: const TextStyle(
-                                    fontSize: 16, color: Colors.black),
-                                children: [
-                                  TextSpan(
-                                    text:
-                                        '${ingredient.quantity}${ingredient.unit} ', // Miktarı başa alıyoruz
-                                    style: const TextStyle(
-                                        fontWeight: FontWeight.bold),
-                                  ),
-                                  TextSpan(
-                                      text: ingredient
-                                          .name), // İsmi yanına ekliyoruz
-                                ],
-                              ),
+              const Divider(height: 24),
+              // Malzemeleri (Ingredient) gösteren döngü
+              ...meal.items.map((item) => Padding(
+                    padding: const EdgeInsets.only(bottom: 6),
+                    child: Row(
+                      children: [
+                        Icon(Icons.circle, size: 8, color: Colors.grey[400]),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: RichText(
+                            text: TextSpan(
+                              style: const TextStyle(
+                                  fontSize: 16, color: Colors.black),
+                              children: [
+                                TextSpan(
+                                  text:
+                                      '${item.quantity} ${item.unit} ', // Miktar ve birim
+                                  style: const TextStyle(
+                                      fontWeight: FontWeight.bold),
+                                ),
+                                TextSpan(text: item.name), // Malzeme adı
+                              ],
                             ),
                           ),
-                          // Malzeme makrolarını göster
-                          Text(
-                            '${ingredient.calories}kcal',
-                            style: TextStyle(
-                              fontSize: 12,
-                              color: Colors.grey[600],
-                              fontWeight: FontWeight.w500,
-                            ),
-                          ),
-                        ],
-                      ),
-                    )),
-                // Öğün toplam makrolarını göster
-                const SizedBox(height: 8),
-                Container(
-                  padding: const EdgeInsets.all(8),
-                  decoration: BoxDecoration(
-                    color: Colors.blue[50],
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                    children: [
-                      Text('Prot: ${meal.totalProtein}g',
-                          style: const TextStyle(
-                              fontSize: 12, fontWeight: FontWeight.bold)),
-                      Text('Karb: ${meal.totalCarbs}g',
-                          style: const TextStyle(
-                              fontSize: 12, fontWeight: FontWeight.bold)),
-                      Text('Yağ: ${meal.totalFat}g',
-                          style: const TextStyle(
-                              fontSize: 12, fontWeight: FontWeight.bold)),
-                    ],
-                  ),
-                ),
-              ] else ...[
-                // Eski format: items'ı göster
-                ...meal.items.map((item) => Padding(
-                      padding: const EdgeInsets.only(bottom: 6),
-                      child: Row(
-                        children: [
-                          Icon(Icons.circle, size: 8, color: Colors.grey[400]),
-                          const SizedBox(width: 8),
-                          Expanded(
-                            child: RichText(
-                              text: TextSpan(
-                                style: const TextStyle(
-                                    fontSize: 16, color: Colors.black),
-                                children: [
-                                  TextSpan(
-                                    text:
-                                        '${item.quantity} ', // Miktarı başa alıyoruz
-                                    style: const TextStyle(
-                                        fontWeight: FontWeight.bold),
-                                  ),
-                                  TextSpan(
-                                      text: item.name), // İsmi yanına ekliyoruz
-                                ],
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
-                    )),
-              ],
-              if (meal.notes != null) ...[
-                const SizedBox(height: 8),
-                Container(
-                  padding: const EdgeInsets.all(8),
-                  decoration: BoxDecoration(
-                    color: Colors.amber[50],
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                  child: Row(
-                    children: [
-                      const Icon(
-                        Icons.lightbulb_outline,
-                        size: 16,
-                        color: Colors.orange,
-                      ),
-                      const SizedBox(width: 8),
-                      Expanded(
-                        child: Text(
-                          meal.notes!,
-                          style: const TextStyle(fontSize: 14),
                         ),
+                        const SizedBox(width: 8),
+                        // Malzeme makrolarını göster
+                        Text(
+                          '${item.calories}kcal',
+                          style: TextStyle(
+                            fontSize: 12,
+                            color: Colors.grey[600],
+                            fontWeight: FontWeight.w500,
+                          ),
+                        ),
+                      ],
+                    ),
+                  )),
+              // Öğün toplam makrolarını göster
+              const SizedBox(height: 8),
+              Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: Colors.blue[50],
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceAround,
+                  children: [
+                    _MacroItem(
+                      label: 'Prot',
+                      value: meal.totalProtein,
+                      color: Colors.red,
+                    ),
+                    _MacroItem(
+                      label: 'Karb',
+                      value: meal.totalCarbs,
+                      color: Colors.blue,
+                    ),
+                    _MacroItem(
+                      label: 'Yağ',
+                      value: meal.totalFat,
+                      color: Colors.green,
+                    ),
+                  ],
+                ),
+              ),
+              // Notlar varsa göster
+              if (meal.notes != null && meal.notes!.isNotEmpty) ...[
+                const SizedBox(height: 12),
+                Row(
+                  children: [
+                    Icon(
+                      Icons.info_outline,
+                      size: 16,
+                      color: Colors.orange,
+                    ),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        meal.notes ?? 'Not yok',
+                        style: const TextStyle(fontSize: 14),
                       ),
-                    ],
-                  ),
+                    ),
+                  ],
                 ),
               ],
             ],
@@ -785,38 +735,7 @@ class _MealCard extends StatelessWidget {
   }
 }
 
-class _WeeklyDayCard extends StatelessWidget {
-  final WeeklyDay day;
-  const _WeeklyDayCard({required this.day});
-
-  @override
-  Widget build(BuildContext context) {
-    return Card(
-      margin: const EdgeInsets.only(bottom: 16),
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              day.day,
-              style: const TextStyle(
-                fontSize: 24,
-                fontWeight: FontWeight.bold,
-                color: Colors.green,
-              ),
-            ),
-            const SizedBox(height: 12),
-            ...day.meals.map((meal) => Padding(
-                  padding: const EdgeInsets.only(bottom: 8),
-                  child: _MealCard(meal: meal),
-                )),
-          ],
-        ),
-      ),
-    );
-  }
-}
+// WeeklyDayCard kaldırıldı - artık sadece DailyPlan kullanıyoruz
 
 // YENİ: DailyPlan için widget
 class _DailyPlanCard extends StatelessWidget {
@@ -834,9 +753,7 @@ class _DailyPlanCard extends StatelessWidget {
       'Cuma',
       'Cumartesi'
     ];
-    final dayName = day.day >= 0 && day.day < dayNames.length
-        ? dayNames[day.day]
-        : 'Gün ${day.day}';
+    final dayName = day.day; // day.day zaten String, direkt kullan
 
     return Card(
       margin: const EdgeInsets.only(bottom: 16),
@@ -883,6 +800,34 @@ class _DailyPlanCard extends StatelessWidget {
           ],
         ),
       ),
+    );
+  }
+}
+
+// YARDIMCI WIDGET - MAKRO DEĞERLERİNİ GÖSTERMEK İÇİN
+class _MacroItem extends StatelessWidget {
+  final String label;
+  final int value;
+  final Color color;
+
+  const _MacroItem(
+      {required this.label, required this.value, required this.color});
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      children: [
+        Text(
+          '${value}g',
+          style: TextStyle(
+              fontSize: 16, fontWeight: FontWeight.bold, color: color),
+        ),
+        const SizedBox(height: 2),
+        Text(
+          label,
+          style: TextStyle(fontSize: 12, color: Colors.grey.shade600),
+        ),
+      ],
     );
   }
 }

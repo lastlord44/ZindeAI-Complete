@@ -299,8 +299,10 @@ class _MealPlanResult extends StatelessWidget {
             ),
             const SizedBox(height: 8),
 
-            // Öğünler
-            ...plan.meals.map((meal) => _MealCard(meal: meal)),
+            // Öğünler - Yeni modelde dailyPlan kullanıyoruz
+            ...plan.dailyPlan
+                .expand((day) => day.meals)
+                .map((meal) => _MealCard(meal: meal)),
           ],
         ),
       ),
@@ -349,7 +351,7 @@ class _MealCard extends StatelessWidget {
             Row(
               children: [
                 Icon(
-                  _getMealIcon(meal.type),
+                  _getMealIcon(meal.name), // 'type' yerine 'name' kullan
                   color: Theme.of(context).primaryColor,
                 ),
                 const SizedBox(width: 8),
@@ -362,7 +364,7 @@ class _MealCard extends StatelessWidget {
                 ),
                 const Spacer(),
                 Text(
-                  '${meal.calories} kcal',
+                  '${meal.totalCalories} kcal', // 'calories' yerine 'totalCalories' kullan
                   style: TextStyle(
                     color: Colors.grey[600],
                     fontWeight: FontWeight.w500,
@@ -379,13 +381,16 @@ class _MealCard extends StatelessWidget {
                       Expanded(
                         child: RichText(
                           text: TextSpan(
-                            style: const TextStyle(fontSize: 14, color: Colors.black),
+                            style: const TextStyle(
+                                fontSize: 14, color: Colors.black),
                             children: [
                               TextSpan(
-                                text: '${item.quantity} ', // Miktarı başa alıyoruz
-                                style: const TextStyle(fontWeight: FontWeight.bold),
+                                text:
+                                    '${item.quantity} ${item.unit} ', // Miktar ve birim
+                                style: const TextStyle(
+                                    fontWeight: FontWeight.bold),
                               ),
-                              TextSpan(text: item.name), // İsmi yanına ekliyoruz
+                              TextSpan(text: item.name), // Malzeme adı
                             ],
                           ),
                         ),
@@ -399,18 +404,13 @@ class _MealCard extends StatelessWidget {
     );
   }
 
-  IconData _getMealIcon(String type) {
-    switch (type.toLowerCase()) {
-      case 'breakfast':
-        return Icons.breakfast_dining;
-      case 'lunch':
-        return Icons.lunch_dining;
-      case 'dinner':
-        return Icons.dinner_dining;
-      case 'snack':
-        return Icons.cookie;
-      default:
-        return Icons.restaurant;
-    }
+  IconData _getMealIcon(String name) {
+    // 'type' yerine 'name' parametresi
+    name = name.toLowerCase();
+    if (name.contains('kahvaltı')) return Icons.breakfast_dining;
+    if (name.contains('öğle')) return Icons.lunch_dining;
+    if (name.contains('akşam')) return Icons.dinner_dining;
+    if (name.contains('ara')) return Icons.cookie;
+    return Icons.restaurant;
   }
 }

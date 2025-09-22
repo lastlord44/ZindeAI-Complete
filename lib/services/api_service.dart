@@ -49,8 +49,9 @@ class ApiService {
       print('Days: $daysPerWeek');
       print('Preferences: $preferences');
 
+      // TÜM İSTEKLER ARTIK '/zindeai-router' ENDPOINT'İNE GİDECEK
       final response = await _dio.post('/zindeai-router', data: {
-        'type': 'meal-plan',
+        'requestType': 'plan', // NE İSTEDİĞİMİZİ BURADA BELİRTİYORUZ
         'calories': calories,
         'goal': goal,
         'diet': diet,
@@ -91,8 +92,9 @@ class ApiService {
     int? timePerSession,
   }) async {
     try {
+      // TÜM İSTEKLER ARTIK '/zindeai-router' ENDPOINT'İNE GİDECEK
       final response = await _dio.post('/zindeai-router', data: {
-        'type': 'workout-plan',
+        'requestType': 'antrenman', // NE İSTEDİĞİMİZİ BURADA BELİRTİYORUZ
         'userId': userId,
         'age': age,
         'gender': gender,

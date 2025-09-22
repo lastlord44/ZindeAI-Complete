@@ -1,16 +1,142 @@
-# zindeai_test
+# ZindeAI - AI-Powered Fitness & Nutrition App
 
-A new Flutter project.
+## 🎯 Proje Özeti
 
-## Getting Started
+ZindeAI, yapay zeka destekli kişiselleştirilmiş fitness ve beslenme planları oluşturan Flutter uygulamasıdır. Kullanıcıların fiziksel özelliklerine, hedeflerine ve tercihlerine göre özel antrenman ve beslenme planları sunar.
 
-This project is a starting point for a Flutter application.
+## ✨ Özellikler
 
-A few resources to get you started if this is your first Flutter project:
+### 🏋️ Antrenman Planları
+- **AI Destekli Plan Oluşturma**: Groq Llama modeli ile kişiselleştirilmiş antrenman planları
+- **Split Mantığı**: Gün sayısına göre otomatik split seçimi (Full Body, Upper/Lower, Push/Pull/Legs)
+- **Egzersiz Veritabanı**: Onaylı egzersiz listesi ile güvenli planlar
+- **Detaylı Bilgiler**: Set, tekrar, dinlenme süreleri ve RPE değerleri
 
-- [Lab: Write your first Flutter app](https://docs.flutter.dev/get-started/codelab)
-- [Cookbook: Useful Flutter samples](https://docs.flutter.dev/cookbook)
+### 🍎 Beslenme Planları
+- **AI Destekli Beslenme**: Gemini modeli ile detaylı beslenme planları
+- **Makro Hesaplama**: Kalori, protein, karbonhidrat, yağ hesaplamaları
+- **Malzeme Detayları**: Her öğün için detaylı malzeme listesi
+- **Haftalık Planlar**: 7 günlük kapsamlı beslenme programları
 
-For help getting started with Flutter development, view the
-[online documentation](https://docs.flutter.dev/), which offers tutorials,
-samples, guidance on mobile development, and a full API reference.
+### 👤 Profil Yönetimi
+- **Kişisel Bilgiler**: Yaş, boy, kilo, cinsiyet
+- **Fitness Seviyesi**: Başlangıç, orta, ileri seviye
+- **Hedef Belirleme**: Kilo alma, kilo verme, bakım
+- **Tercihler**: Diyet türü, egzersiz sıklığı
+
+## 🏗️ Teknik Mimari
+
+### Frontend (Flutter)
+- **Framework**: Flutter 3.x
+- **State Management**: Provider
+- **HTTP Client**: Dio
+- **Database**: Supabase Flutter
+
+### Backend (Supabase)
+- **Database**: PostgreSQL
+- **Edge Functions**: Deno TypeScript
+- **Authentication**: Supabase Auth
+- **Storage**: Supabase Storage
+
+### AI Entegrasyonu
+- **Antrenman Planları**: Groq Llama 3.1-8b-instant
+- **Beslenme Planları**: Google Gemini 1.5 Flash
+- **JSON Temizleme**: Backend'de otomatik format düzeltme
+
+## 🚀 Kurulum
+
+### Gereksinimler
+- Flutter SDK 3.x
+- Dart SDK 3.x
+- Android Studio / VS Code
+- Supabase CLI
+
+### Adımlar
+
+1. **Repository'yi klonlayın**
+```bash
+git clone https://github.com/yourusername/zindeai.git
+cd zindeai
+```
+
+2. **Bağımlılıkları yükleyin**
+```bash
+flutter pub get
+```
+
+3. **Supabase'i başlatın**
+```bash
+npx supabase start
+```
+
+4. **Environment değişkenlerini ayarlayın**
+```bash
+# supabase/.env dosyasına API anahtarlarını ekleyin
+GEMINI_API_KEY=your_gemini_key
+GROQ_API_KEY=your_groq_key
+```
+
+5. **Uygulamayı çalıştırın**
+```bash
+flutter run
+```
+
+## 📱 Kullanım
+
+1. **Profil Oluşturma**: Kişisel bilgilerinizi girin
+2. **Hedef Belirleme**: Fitness hedefinizi seçin
+3. **Plan Oluşturma**: AI destekli planlarınızı oluşturun
+4. **Takip Etme**: Günlük ilerlemenizi takip edin
+
+## 🔧 Geliştirme
+
+### Proje Yapısı
+```
+lib/
+├── models/          # Veri modelleri
+├── screens/         # UI ekranları
+├── services/        # API servisleri
+├── utils/           # Yardımcı fonksiyonlar
+└── main.dart        # Ana dosya
+
+supabase/
+├── functions/       # Edge Functions
+├── migrations/      # Veritabanı migrasyonları
+└── schema.sql       # Veritabanı şeması
+```
+
+### API Endpoints
+- `POST /zindeai-router` - AI plan oluşturma
+  - `requestType: "plan"` - Beslenme planı
+  - `requestType: "antrenman"` - Antrenman planı
+
+## 🐛 Bilinen Sorunlar
+
+- [ ] GIF'lerin yüklenmemesi
+- [ ] Profil ekranında yazı boyutu sorunları
+- [ ] Offline mod desteği eksik
+
+## 🤝 Katkıda Bulunma
+
+1. Fork yapın
+2. Feature branch oluşturun (`git checkout -b feature/amazing-feature`)
+3. Commit yapın (`git commit -m 'Add amazing feature'`)
+4. Push yapın (`git push origin feature/amazing-feature`)
+5. Pull Request oluşturun
+
+## 📄 Lisans
+
+Bu proje MIT lisansı altında lisanslanmıştır. Detaylar için `LICENSE` dosyasına bakın.
+
+## 📞 İletişim
+
+- **Proje Sahibi**: [Your Name]
+- **Email**: your.email@example.com
+- **GitHub**: [@yourusername](https://github.com/yourusername)
+
+## 🙏 Teşekkürler
+
+- [Flutter](https://flutter.dev/) - UI Framework
+- [Supabase](https://supabase.com/) - Backend as a Service
+- [Groq](https://groq.com/) - AI Model API
+- [Google Gemini](https://ai.google.dev/) - AI Model API
