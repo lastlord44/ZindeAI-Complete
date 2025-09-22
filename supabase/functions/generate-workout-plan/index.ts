@@ -43,18 +43,20 @@ async function callAIWithFallback(prompt: string): Promise<string> {
               'Content-Type': 'application/json',
             },
             body: JSON.stringify({
+              model: 'llama-3.1-70b-versatile', // EN İYİ MODEL
               messages: [
                 {
                   role: 'system',
-                  content: 'Sen ZindeAI fitness uzmanısın. Evde yapılabilecek, etkili antrenman planları hazırlarsın. TÜM egzersiz isimlerini TÜRKÇE yaz. JSON formatında detaylı plan ver.'
+                  content: 'JSON uzmanısın. SADECE JSON döndür, başka açıklama yapma.'
                 },
                 {
                   role: 'user',
                   content: prompt
                 }
               ],
-              temperature: 0.7,
-              max_tokens: 2000
+              temperature: 0.2, // Daha tutarlı
+              max_tokens: 4000, // Daha fazla token
+              response_format: { type: "json_object" } // JSON ZORLA
             }),
           })
           break
