@@ -1,11 +1,17 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:intl/date_symbol_data_local.dart'; // BUNU EKLE
+import 'package:intl/intl.dart'; // BUNU EKLE
 import 'screens/home_screen.dart';
 import 'services/api_service.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  
+  // LOCALE İNİTİALİZE ET
+  await initializeDateFormatting('tr_TR', null);
+  Intl.defaultLocale = 'tr_TR';
 
   // Supabase'i başlat
   await Supabase.initialize(

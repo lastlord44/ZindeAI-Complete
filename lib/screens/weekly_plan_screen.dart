@@ -84,21 +84,30 @@ class _WeeklyPlanScreenState extends State<WeeklyPlanScreen>
       final tdee = _calculateTDEE(bmr);
       final targetCalories = _getTargetCalories(tdee);
 
-      // API'ye gönder - AI oradan plan oluşturacak
+      // API'YE DİREKT 7 GÜNLÜK İSTE
       final plan = await apiService.createMealPlan(
-        calories: targetCalories, // Bu değer API'ye gidiyor
-        goal: _getMealGoal(), // API bunu AI'ya veriyor
-        diet: _getDietType(), // Groq/Gemini buna göre plan yapıyor
+        calories: targetCalories,
+        goal: _getMealGoal(),
+        diet: _getDietType(),
+        daysPerWeek: 7, // ZORLA 7
         preferences: widget.profile.dietFlags.isNotEmpty
             ? {for (var flag in widget.profile.dietFlags) flag: true}
-            : null,
+            : {},
       );
+
+      print('API Response: Plan alındı');
+      
+      // 7 gün geldiğini kontrol et
+      if (plan.dailyPlan.length < 7) {
+        throw '7 günlük plan gelmedi, gelen gün sayısı: ${plan.dailyPlan.length}';
+      }
 
       setState(() {
         _mealPlan = plan; // AI'dan gelen plan
         _isLoadingMeal = false;
       });
     } catch (e) {
+      print('HATA: $e');
       setState(() {
         _mealError = e.toString();
         _isLoadingMeal = false;
@@ -194,6 +203,16 @@ class _WeeklyPlanScreenState extends State<WeeklyPlanScreen>
       floatingActionButton: _mealPlan != null
           ? FloatingActionButton.extended(
               onPressed: () {
+                // 7 gün kontrolü
+                if (_mealPlan!.dailyPlan.length < 7) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                        content: Text(
+                            'Haftalık plan eksik: ${_mealPlan!.dailyPlan.length} gün var')),
+                  );
+                  return;
+                }
+
                 Navigator.push(
                   context,
                   MaterialPageRoute(

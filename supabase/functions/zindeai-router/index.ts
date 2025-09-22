@@ -1,7 +1,6 @@
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts'
 import { corsHeaders } from '../_shared/cors.ts'
 
-// ONAYLI EGZERSİZ VERİTABANI
 const EXERCISE_DATABASE = [
     { exerciseId: 'barbell_bench_press', name: 'Barbell Bench Press' }, { exerciseId: 'dumbbell_bench_press', name: 'Dumbbell Bench Press' },
     { exerciseId: 'push_up', name: 'Push-up' }, { exerciseId: 'overhead_press', name: 'Overhead Press' },
@@ -13,52 +12,9 @@ const EXERCISE_DATABASE = [
     { exerciseId: 'lateral_raise', name: 'Lateral Raise' }, { exerciseId: 'leg_curl', name: 'Leg Curl' }, { exerciseId: 'lunges', name: 'Lunges' }
 ];
 
-function cleanAndParseJson(text: string) {
-  try {
-    let cleanText = text.trim();
-    
-    // 1. Tüm markdown kod bloklarını agresif şekilde temizle
-    cleanText = cleanText.replace(/^```json\s*/gm, '');
-    cleanText = cleanText.replace(/^```\s*/gm, '');
-    cleanText = cleanText.replace(/```$/gm, '');
-    cleanText = cleanText.replace(/```\s*$/gm, '');
-    
-    // 2. Yorum satırlarını temizle (// ve /* */)
-    cleanText = cleanText.replace(/\/\/.*$/gm, '');
-    cleanText = cleanText.replace(/\/\*[\s\S]*?\*\//gm, '');
-    
-    // 3. Trailing comma'ları temizle
-    cleanText = cleanText.replace(/,\s*([\]}])/g, '$1');
-    
-    // 4. Boş satırları temizle
-    cleanText = cleanText.replace(/^\s*$/gm, '');
-    
-    // 5. İlk { ve son } karakterlerini bul
-    const startIndex = cleanText.indexOf('{');
-    const endIndex = cleanText.lastIndexOf('}');
-    
-    if (startIndex !== -1 && endIndex !== -1 && endIndex > startIndex) {
-      cleanText = cleanText.substring(startIndex, endIndex + 1);
-    }
-    
-    // 6. Son kontrol - eğer hala markdown varsa temizle
-    cleanText = cleanText.replace(/```/g, '');
-    
-    console.log("Temizlenmiş JSON:", cleanText.substring(0, 100) + "...");
-    
-    return JSON.parse(cleanText);
-  } catch (error) {
-    console.error("JSON Temizleme ve Parse Etme Hatası:", error);
-    console.error("Ham metin:", text.substring(0, 200));
-    console.error("Temizlenmiş metin:", cleanText.substring(0, 200));
-    throw new Error(`Geçersiz JSON formatı: ${text.substring(0, 100)}...`);
-  }
-}
-
 function createPrompt(endpoint: string, body: any): string {
     if (endpoint === 'plan') {
         const { calories, goal } = body;
-        // HER ZAMAN 7 GÜN!
         const daysPerWeek = 7;
         return `
           Sen bir Türk uzman diyetisyensin. Sadece JSON formatında cevap ver. Asla açıklama ekleme.
@@ -135,8 +91,7 @@ serve(async (req) => {
     }
 
     let providerResponse;
-    let rawContent = '';
-
+    
     if (endpoint === 'plan') {
       console.log('Beslenme planı için Gemini çağrılıyor...');
       const GEMINI_API_KEY = Deno.env.get('GEMINI_API_KEY');
@@ -153,16 +108,6 @@ serve(async (req) => {
           }
         }),
       });
-
-      if (!providerResponse.ok) throw new Error(`Gemini API Hatası: ${await providerResponse.text()}`);
-      
-      const jsonData = await providerResponse.json();
-      // YENİ GÜVENLİK KONTROLÜ
-      if (!jsonData.candidates || !jsonData.candidates[0].content.parts[0].text) {
-        throw new Error('Gemini API cevabı beklenmedik bir formatta geldi.');
-      }
-      rawContent = jsonData.candidates[0].content.parts[0].text;
-
     } else if (endpoint === 'antrenman') {
       console.log('Antrenman planı için Groq (Llama) çağrılıyor...');
       const GROQ_API_KEY = Deno.env.get('GROQ_API_KEY');
@@ -176,23 +121,22 @@ serve(async (req) => {
           response_format: { type: "json_object" }
         }),
       });
+    } else {
+        throw new Error("Geçersiz endpoint türü");
+    }
 
-      if (!providerResponse.ok) throw new Error(`Groq API Hatası: ${await providerResponse.text()}`);
-      
-      const jsonData = await providerResponse.json();
-      rawContent = jsonData.choices[0].message.content;
+    if (!providerResponse.ok) {
+        const errorBody = await providerResponse.text();
+        throw new Error(`API Hatası: ${providerResponse.status} ${errorBody}`);
     }
     
-    // SON KONTROL: Gelen içeriğin gerçekten JSON'a benzediğinden emin ol
-    // Eğer düz metin ise, cleanAndParseJson fonksiyonu bir hata fırlatacak.
-    const cleanJsonData = cleanAndParseJson(rawContent);
-
+    const jsonData = await providerResponse.json();
+    
     return new Response(
-      JSON.stringify(cleanJsonData),
+      JSON.stringify(jsonData),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     )
   } catch (error) {
-    // Fırlatılan herhangi bir hata burada yakalanacak ve Flutter'a temiz bir hata mesajı olarak gönderilecek.
     console.error("Fonksiyon Hatası:", error.message);
     return new Response(
       JSON.stringify({ error: error.message }),
