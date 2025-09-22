@@ -1,0 +1,46 @@
+name: zindeai_test
+description: ZindeAI Router Worker Test Application
+publish_to: 'none'
+version: 1.0.0+1
+
+environment:
+  sdk: '>=3.0.0 <4.0.0'
+
+dependencies:
+  flutter:
+    sdk: flutter
+
+  # HTTP Client
+  dio: ^5.4.0
+  
+  # Supabase
+  supabase_flutter: ^2.0.0
+  
+  # UI Components
+  cupertino_icons: ^1.0.6
+  
+  # State Management
+  provider: ^6.1.1
+  
+  # JSON Serialization
+  json_annotation: ^4.8.1
+  
+  # Media Display
+  cached_network_image: ^3.3.1
+  video_player: ^2.8.2
+  
+  # Utilities
+  fluttertoast: ^8.2.4
+  shimmer: ^3.0.0
+  url_launcher: ^6.2.2
+  shared_preferences: ^2.2.2
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^3.0.0
+  json_serializable: ^6.7.1
+  build_runner: ^2.4.7
+
+flutter:
+  uses-material-design: true
