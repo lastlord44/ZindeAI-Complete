@@ -17,16 +17,23 @@ function cleanAndParseJson(text: string) {
   try {
     let cleanText = text.trim();
     
-    // 1. Markdown kod bloklarını temizle (```json ve ```)
-    cleanText = cleanText.replace(/^```json\s*/i, '').replace(/```\s*$/, '');
+    // 1. Tüm markdown kod bloklarını agresif şekilde temizle
+    cleanText = cleanText.replace(/^```json\s*/gm, '');
+    cleanText = cleanText.replace(/^```\s*/gm, '');
+    cleanText = cleanText.replace(/```$/gm, '');
+    cleanText = cleanText.replace(/```\s*$/gm, '');
     
-    // 2. Yorum satırlarını temizle
-    cleanText = cleanText.replace(/\/\*[\s\S]*?\*\/|\/\/.*/g, '');
+    // 2. Yorum satırlarını temizle (// ve /* */)
+    cleanText = cleanText.replace(/\/\/.*$/gm, '');
+    cleanText = cleanText.replace(/\/\*[\s\S]*?\*\//gm, '');
     
     // 3. Trailing comma'ları temizle
     cleanText = cleanText.replace(/,\s*([\]}])/g, '$1');
     
-    // 4. İlk { ve son } karakterlerini bul
+    // 4. Boş satırları temizle
+    cleanText = cleanText.replace(/^\s*$/gm, '');
+    
+    // 5. İlk { ve son } karakterlerini bul
     const startIndex = cleanText.indexOf('{');
     const endIndex = cleanText.lastIndexOf('}');
     
@@ -34,10 +41,16 @@ function cleanAndParseJson(text: string) {
       cleanText = cleanText.substring(startIndex, endIndex + 1);
     }
     
+    // 6. Son kontrol - eğer hala markdown varsa temizle
+    cleanText = cleanText.replace(/```/g, '');
+    
+    console.log("Temizlenmiş JSON:", cleanText.substring(0, 100) + "...");
+    
     return JSON.parse(cleanText);
   } catch (error) {
     console.error("JSON Temizleme ve Parse Etme Hatası:", error);
     console.error("Ham metin:", text.substring(0, 200));
+    console.error("Temizlenmiş metin:", cleanText.substring(0, 200));
     throw new Error(`Geçersiz JSON formatı: ${text.substring(0, 100)}...`);
   }
 }

@@ -39,7 +39,11 @@ class _ProfileScreenState extends State<ProfileScreen> {
   @override
   void initState() {
     super.initState();
-    _loadProfile(); // Önce profili yükle
+    // Varsayılan değerleri hemen set et
+    _ageController.text = '25';
+    _heightController.text = '170';
+    _weightController.text = '70';
+    _loadProfile(); // Sonra profili yükle
   }
 
   Future<void> _loadProfile() async {
@@ -61,11 +65,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
         _dietFlags = profile.dietFlags;
       });
     } else {
-      // Profil yoksa varsayılan değerleri set et
+      // Profil yoksa varsayılan değerleri set et (zaten initState'de set edildi)
       setState(() {
-        _ageController.text = '25';
-        _heightController.text = '170';
-        _weightController.text = '70';
+        // Controller değerleri zaten initState'de set edildi
       });
     }
   }
