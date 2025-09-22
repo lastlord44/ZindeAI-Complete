@@ -55,8 +55,8 @@ ZindeAI, yapay zeka destekli kişiselleştirilmiş fitness ve beslenme planları
 
 1. **Repository'yi klonlayın**
 ```bash
-git clone https://github.com/yourusername/zindeai.git
-cd zindeai
+git clone https://github.com/lastlord44/ZindeAI.git
+cd ZindeAI
 ```
 
 2. **Bağımlılıkları yükleyin**
@@ -130,9 +130,8 @@ Bu proje MIT lisansı altında lisanslanmıştır. Detaylar için `LICENSE` dosy
 
 ## 📞 İletişim
 
-- **Proje Sahibi**: [Your Name]
-- **Email**: your.email@example.com
-- **GitHub**: [@yourusername](https://github.com/yourusername)
+- **Proje Sahibi**: [lastlord44](https://github.com/lastlord44)
+- **GitHub**: [@lastlord44](https://github.com/lastlord44)
 
 ## 🙏 Teşekkürler
 
