@@ -1,4 +1,5 @@
 import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:flutter/foundation.dart';
 import '../models/meal_plan.dart';
 import '../models/workout_plan.dart';
 import '../models/user_profile.dart';
@@ -50,7 +51,7 @@ class SupabaseService {
 
       return UserProfile.fromJson(response);
     } catch (e) {
-      print('Profil yüklenemedi: $e');
+      debugPrint('Profil yüklenemedi: $e');
       return null;
     }
   }

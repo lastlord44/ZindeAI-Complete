@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../services/api_service.dart';
 import '../models/meal_plan.dart';
-import '../widgets/loading_widget.dart';
 import '../widgets/error_widget.dart' as app;
 
 class MealPlanScreen extends StatefulWidget {

@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../services/api_service.dart';
-import '../models/workout_plan.dart';
 
 class WorkoutPlanFormScreen extends StatefulWidget {
   const WorkoutPlanFormScreen({super.key});

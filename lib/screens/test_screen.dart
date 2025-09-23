@@ -431,7 +431,7 @@ class _TestScreenState extends State<TestScreen> {
       List<_TestScenario> scenarios, String category) async {
     for (final scenario in scenarios) {
       setState(() {
-        _currentTest = '${category}: ${scenario.name}';
+        _currentTest = '$category: ${scenario.name}';
       });
 
       final stopwatch = Stopwatch()..start();

@@ -1,3 +1,5 @@
+import 'package:flutter/foundation.dart';
+
 /// Güvenli JSON parsing yardımcı fonksiyonları
 /// AI'dan gelen "kirli" veriyi temizleyip doğru formata çevirir
 
@@ -58,14 +60,14 @@ List<T> safeParseList<T>(dynamic value, T Function(dynamic) itemParser,
         try {
           result.add(itemParser(item));
         } catch (e) {
-          print('Item parsing error: $e for item: $item');
+          debugPrint('Item parsing error: $e for item: $item');
           // Hatalı item'ı atla, devam et
           continue;
         }
       }
       return result;
     } catch (e) {
-      print('List parsing error: $e');
+      debugPrint('List parsing error: $e');
       return defaultValue;
     }
   }

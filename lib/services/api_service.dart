@@ -1,4 +1,5 @@
 import 'package:dio/dio.dart';
+import 'package:flutter/foundation.dart';
 import '../models/meal_plan.dart';
 import '../models/workout_plan.dart';
 import '../models/health_status.dart';
@@ -46,8 +47,8 @@ class ApiService {
     Map<String, dynamic>? preferences,
   }) async {
     try {
-      print('🚀 Smart API Handler ile yemek planı oluşturuluyor...');
-      print('Calories: $calories, Goal: $goal, Diet: $diet');
+      debugPrint('🚀 Smart API Handler ile yemek planı oluşturuluyor...');
+      debugPrint('Calories: $calories, Goal: $goal, Diet: $diet');
 
       // Smart handler kullan
       return await _smartHandler.createMealPlan(
@@ -58,7 +59,7 @@ class ApiService {
         preferences: preferences,
       );
     } catch (e) {
-      print('❌ Smart handler hatası: $e');
+      debugPrint('❌ Smart handler hatası: $e');
       throw 'Yemek planı oluşturulamadı: $e';
     }
   }
@@ -80,8 +81,8 @@ class ApiService {
     int? timePerSession,
   }) async {
     try {
-      print('🚀 Smart API Handler ile antrenman planı oluşturuluyor...');
-      print('User: $userId, Age: $age, Goal: $goal, Days: $daysPerWeek');
+      debugPrint('🚀 Smart API Handler ile antrenman planı oluşturuluyor...');
+      debugPrint('User: $userId, Age: $age, Goal: $goal, Days: $daysPerWeek');
 
       // Smart handler kullan
       return await _smartHandler.createWorkoutPlan(
@@ -100,7 +101,7 @@ class ApiService {
         timePerSession: timePerSession,
       );
     } catch (e) {
-      print('❌ Smart handler hatası: $e');
+      debugPrint('❌ Smart handler hatası: $e');
       throw 'Antrenman planı oluşturulamadı: $e';
     }
   }

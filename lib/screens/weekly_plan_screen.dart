@@ -95,7 +95,7 @@ class _WeeklyPlanScreenState extends State<WeeklyPlanScreen>
             : {},
       );
 
-      print('API Response: Plan alındı');
+      debugPrint('API Response: Plan alındı');
       
       // 7 gün geldiğini kontrol et
       if (plan.dailyPlan.length < 7) {
@@ -107,7 +107,7 @@ class _WeeklyPlanScreenState extends State<WeeklyPlanScreen>
         _isLoadingMeal = false;
       });
     } catch (e) {
-      print('HATA: $e');
+      debugPrint('HATA: $e');
       setState(() {
         _mealError = e.toString();
         _isLoadingMeal = false;
@@ -788,15 +788,8 @@ class _DailyPlanCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final dayNames = [
-      'Pazar',
-      'Pazartesi',
-      'Salı',
-      'Çarşamba',
-      'Perşembe',
-      'Cuma',
-      'Cumartesi'
-    ];
+    // Day names for reference (currently unused but kept for future use)
+    // final dayNames = ['Pazar', 'Pazartesi', 'Salı', 'Çarşamba', 'Perşembe', 'Cuma', 'Cumartesi'];
     final dayName = day.day; // day.day zaten String, direkt kullan
 
     return Card(
@@ -870,7 +863,7 @@ class _MacroItem extends StatelessWidget {
         Text(
           label,
           style: TextStyle(
-              fontSize: 12, color: Colors.grey.shade600 ?? Colors.grey),
+              fontSize: 12, color: Colors.grey.shade600),
         ),
       ],
     );
