@@ -47,14 +47,32 @@ class _TestScreenState extends State<TestScreen> {
               spacing: 8,
               runSpacing: 8,
               children: [
-                ElevatedButton.icon(
-                  onPressed: _isRunning ? null : () => _runAllTests(),
-                  icon: const Icon(Icons.play_arrow),
-                  label: const Text('Tüm Testleri Çalıştır'),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.green,
-                    foregroundColor: Colors.white,
-                  ),
+                Row(
+                  children: [
+                    Expanded(
+                      child: ElevatedButton.icon(
+                        onPressed: _isRunning ? null : () => _runAllTests(),
+                        icon: const Icon(Icons.play_arrow),
+                        label: const Text('Tüm Testleri Çalıştır'),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: Colors.green,
+                          foregroundColor: Colors.white,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: ElevatedButton.icon(
+                        onPressed: _testApiConnection,
+                        icon: const Icon(Icons.api),
+                        label: const Text('API Test'),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: Colors.blue,
+                          foregroundColor: Colors.white,
+                        ),
+                      ),
+                    ),
+                  ],
                 ),
                 ElevatedButton.icon(
                   onPressed: _isRunning ? null : () => _runMealPlanTests(),
@@ -497,6 +515,28 @@ class _TestScreenState extends State<TestScreen> {
         ],
       ),
     );
+  }
+
+  /// API bağlantısını test et
+  Future<void> _testApiConnection() async {
+    try {
+      final smartHandler = SmartApiHandler();
+      await smartHandler.testApiConnection();
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('API test tamamlandı, console loglarını kontrol edin'),
+          backgroundColor: Colors.blue,
+        ),
+      );
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('API test hatası: $e'),
+          backgroundColor: Colors.red,
+        ),
+      );
+    }
   }
 }
 

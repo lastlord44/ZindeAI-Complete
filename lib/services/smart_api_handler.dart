@@ -49,6 +49,38 @@ class SmartApiHandler {
     debugPrint('🚀 Smart API Handler başlatıldı');
   }
 
+  /// API bağlantısını test et
+  Future<void> testApiConnection() async {
+    try {
+      debugPrint('🧪 API bağlantısı test ediliyor...');
+
+      final response = await _dio.post(
+        'https://uhibpbwgvnvasxlvcohr.supabase.co/functions/v1/zindeai-router',
+        data: {
+          'action': 'generate-meal-plan',
+          'data': {'test': true}
+        },
+        options: Options(
+          headers: {
+            'Authorization':
+                'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InVoaWJwYndndm52YXN4bHZjb2hyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTg1Mjg2MDMsImV4cCI6MjA3NDEwNDYwM30.kZLLAiRyWuFsr-Lb8qzR7KXoSoH_7AVtgEkK9sZEGj8',
+            'apikey':
+                'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InVoaWJwYndndm52YXN4bHZjb2hyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTg1Mjg2MDMsImV4cCI6MjA3NDEwNDYwM30.kZLLAiRyWuFsr-Lb8qzR7KXoSoH_7AVtgEkK9sZEGj8',
+          },
+        ),
+      );
+
+      debugPrint('✅ API Response Status: ${response.statusCode}');
+      debugPrint('✅ API Response Data: ${response.data}');
+
+      if (response.statusCode == 200) {
+        debugPrint('🎉 BAŞARILI! API çalışıyor!');
+      }
+    } catch (e) {
+      debugPrint('❌ API Test Hatası: $e');
+    }
+  }
+
   /// Yemek planı oluştur - Akıllı fallback sistemi
   Future<MealPlan> createMealPlan({
     required int calories,
@@ -401,7 +433,8 @@ class SmartApiHandler {
         'user_id': _supabase.auth.currentUser?.id,
       });
     } catch (e) {
-      debugPrint('⚠️ API log kaydedilemedi: $e');
+      // Tablo yoksa sessizce devam et, sadece debug'da göster
+      debugPrint('⚠️ API log tablosu bulunamadı, log kaydedilmedi: $e');
     }
   }
 
