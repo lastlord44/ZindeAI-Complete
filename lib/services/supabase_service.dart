@@ -46,7 +46,7 @@ class SupabaseService {
           .eq('id', user.id)
           .single();
 
-      if (response == null) return null;
+      if (response.isEmpty) return null;
 
       return UserProfile.fromJson(response);
     } catch (e) {
@@ -83,13 +83,21 @@ class SupabaseService {
           'total_protein': mealPlan.totalProtein,
           'total_carbs': mealPlan.totalCarbs,
           'total_fat': mealPlan.totalFat,
-          'weekly_plan': mealPlan.weeklyPlan?.map((day) => {
+          'weekly_plan': mealPlan.dailyPlan.map((day) => {
             'day': day.day,
             'meals': day.meals.map((meal) => {
               'name': meal.name,
-              'type': meal.type,
-              'calories': meal.calories,
-              'items': meal.items,
+              'type': 'meal',
+              'calories': meal.totalCalories,
+              'items': meal.items.map((item) => {
+                'name': item.name,
+                'quantity': item.quantity,
+                'unit': item.unit,
+                'calories': item.calories,
+                'protein': item.protein,
+                'carbs': item.carbs,
+                'fat': item.fat,
+              }).toList(),
               'notes': meal.notes,
             }).toList(),
           }).toList(),

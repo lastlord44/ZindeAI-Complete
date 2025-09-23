@@ -1,14 +1,15 @@
 import 'package:dio/dio.dart';
-import 'dart:convert';
 import '../models/meal_plan.dart';
 import '../models/workout_plan.dart';
 import '../models/health_status.dart';
 import '../models/exercise.dart';
+import 'smart_api_handler.dart';
 
 class ApiService {
   static const String baseUrl =
       'https://uhibpbwgvnvasxlvcohr.supabase.co/functions/v1';
   final Dio _dio;
+  final SmartApiHandler _smartHandler = SmartApiHandler();
 
   ApiService()
       : _dio = Dio(
@@ -31,9 +32,12 @@ class ApiService {
       responseBody: true,
       error: true,
     ));
+
+    // Smart handler'ı başlat
+    _smartHandler.initialize();
   }
 
-  // 1. Yemek Planı Oluştur
+  // 1. Yemek Planı Oluştur - Smart Handler kullan
   Future<MealPlan> createMealPlan({
     required int calories,
     required String goal,
@@ -42,40 +46,24 @@ class ApiService {
     Map<String, dynamic>? preferences,
   }) async {
     try {
-      print('7 GÜNLÜK PLAN İSTENİYOR!');
-      print('Calories: $calories');
-      print('Goal: $goal');
-      print('Diet: $diet');
-      print('Days: 7 (HER ZAMAN 7!)');
-      print('Preferences: $preferences');
+      print('🚀 Smart API Handler ile yemek planı oluşturuluyor...');
+      print('Calories: $calories, Goal: $goal, Diet: $diet');
 
-      // TÜM İSTEKLER ARTIK '/zindeai-router' ENDPOINT'İNE GİDECEK
-      final response = await _dio.post('/zindeai-router', data: {
-        'requestType': 'plan', // NE İSTEDİĞİMİZİ BURADA BELİRTİYORUZ
-        'calories': calories,
-        'goal': goal,
-        'diet': diet,
-        'daysPerWeek': 7, // HER ZAMAN 7 GÖNDER!
-        'preferences': preferences ?? {},
-      });
-
-      print('Response status: ${response.statusCode}');
-      print('Response type: ${response.data.runtimeType}');
-      print('Response data: ${response.data}');
-
-      // Artık temizleme yok, çünkü cevap zaten temiz!
-      return MealPlan.fromJson(response.data);
-    } on DioException catch (e) {
-      print('API Error: ${e.response?.statusCode}');
-      print('Error data: ${e.response?.data}');
-      throw _handleError(e);
+      // Smart handler kullan
+      return await _smartHandler.createMealPlan(
+        calories: calories,
+        goal: goal,
+        diet: diet,
+        daysPerWeek: daysPerWeek,
+        preferences: preferences,
+      );
     } catch (e) {
-      print('Unexpected error: $e');
-      throw 'Beklenmeyen hata: $e';
+      print('❌ Smart handler hatası: $e');
+      throw 'Yemek planı oluşturulamadı: $e';
     }
   }
 
-  // 2. Antrenman Planı Oluştur
+  // 2. Antrenman Planı Oluştur - Smart Handler kullan
   Future<WorkoutPlan> createWorkoutPlan({
     required String userId,
     required int age,
@@ -92,28 +80,28 @@ class ApiService {
     int? timePerSession,
   }) async {
     try {
-      // TÜM İSTEKLER ARTIK '/zindeai-router' ENDPOINT'İNE GİDECEK
-      final response = await _dio.post('/zindeai-router', data: {
-        'requestType': 'antrenman', // NE İSTEDİĞİMİZİ BURADA BELİRTİYORUZ
-        'userId': userId,
-        'age': age,
-        'gender': gender,
-        'weight': weight,
-        'height': height,
-        'fitnessLevel': fitnessLevel,
-        'goal': goal,
-        'mode': mode,
-        'daysPerWeek': daysPerWeek,
-        'preferredSplit': preferredSplit,
-        'equipment': equipment,
-        'injuries': injuries,
-        'timePerSession': timePerSession,
-      });
+      print('🚀 Smart API Handler ile antrenman planı oluşturuluyor...');
+      print('User: $userId, Age: $age, Goal: $goal, Days: $daysPerWeek');
 
-      // Artık temizleme yok, çünkü cevap zaten temiz!
-      return WorkoutPlan.fromJson(response.data);
-    } on DioException catch (e) {
-      throw _handleError(e);
+      // Smart handler kullan
+      return await _smartHandler.createWorkoutPlan(
+        userId: userId,
+        age: age,
+        gender: gender,
+        weight: weight,
+        height: height,
+        fitnessLevel: fitnessLevel,
+        goal: goal,
+        mode: mode,
+        daysPerWeek: daysPerWeek,
+        preferredSplit: preferredSplit,
+        equipment: equipment,
+        injuries: injuries,
+        timePerSession: timePerSession,
+      );
+    } catch (e) {
+      print('❌ Smart handler hatası: $e');
+      throw 'Antrenman planı oluşturulamadı: $e';
     }
   }
 
