@@ -5,6 +5,7 @@ import 'media_test_screen.dart';
 import 'health_check_screen.dart';
 import 'batch_test_screen.dart';
 import 'profile_screen.dart';
+import '../services/meal_plan_generator.dart';
 
 class HomeScreen extends StatelessWidget {
   const HomeScreen({super.key});
@@ -77,12 +78,14 @@ class HomeScreen extends StatelessWidget {
                     subtitle: 'POST /plan',
                     icon: Icons.restaurant_menu,
                     color: Colors.orange,
-                    onTap: () => Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (_) => const MealPlanScreen(),
-                      ),
-                    ),
+                    onTap: () async {
+                      try {
+                        final mealPlan = await generateMealPlan(context);
+                        showMealPlanDetails(context, mealPlan);
+                      } catch (e) {
+                        print('Error: $e');
+                      }
+                    },
                   ),
                   _TestCard(
                     title: 'Antrenman',
