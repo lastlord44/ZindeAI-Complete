@@ -168,6 +168,33 @@ supabase/
 **Sebep:** Protein hedefi prompt'ta yeterince vurgulanmıyor
 **Durum:** 🔴 Düzeltilmeli
 
+### 5. Runtime Hatalar (Test Sonrası Tespit Edilen)
+
+#### 5.1. Antrenman Planı Hiç Gelmiyor
+**Sorun:** Edge Function 500 hatası veriyor, antrenman planı oluşturulamıyor
+**Hata:** `DioException [bad response]: 500 Internal Server Error`
+**Lokasyon:** `supabase/functions/zindeai-router/index.ts`
+**Sebep:** Edge Function'da workout plan generation hatası
+**Durum:** 🔴 Acil düzeltilmeli
+
+#### 5.2. Beslenme Planı JSON Parsing Hatası
+**Sorun:** `TypeError: Instance of '() => dynamic': type '() => dynamic' is not a subtype of type '(() => Map<String, Object>)?'`
+**Lokasyon:** `lib/screens/meal_plan_display_screen.dart:371`
+**Sebep:** `firstWhere` orElse callback'i yanlış tip döndürüyor
+**Durum:** 🔴 Acil düzeltilmeli
+
+#### 5.3. Öğün Takip Butonları Çalışmıyor
+**Sorun:** "Yedim/Yemedim" butonları tıklandığında görsel değişiklik olmuyor
+**Etki:** Kullanıcı öğün durumunu takip edemiyor
+**Beklenen:** Yeşil/kırmızı renk değişimi, çizgi çekme, buton kilitleme
+**Durum:** 🔴 Düzeltilmeli
+
+#### 5.4. Takvim Günü Yanlış Gösteriliyor
+**Sorun:** Bugün Pazartesi olmasına rağmen Pazar gösteriliyor
+**Lokasyon:** `lib/screens/meal_plan_display_screen.dart` - `_selectedDay` initialization
+**Sebep:** `DateTime.now().weekday` 1-7 arası döndürüyor, UI 0-6 bekliyor olabilir
+**Durum:** 🔴 Düzeltilmeli
+
 ## 🔧 Yapılan Değişiklikler
 
 ### Edge Function (supabase/functions/zindeai-router/index.ts)
