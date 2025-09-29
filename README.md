@@ -130,23 +130,43 @@ supabase/
 
 ## ❌ Mevcut Hatalar
 
-### 1. JSON Parsing Hatası (Devam Ediyor)
+### 1. JSON Parsing Hatası ✅ ÇÖZÜLDÜ
 **Hata:** `NoSuchMethodError: Class 'String' has no instance getter 'keys'`
 **Lokasyon:** `lib/services/smart_api_handler.dart:302`
 **Sebep:** Edge Function JSON string döndürüyor, Flutter Map bekliyor
-**Durum:** Çözülmedi - String response handling eklendi ama hala çalışmıyor
+**Durum:** ✅ Çözüldü - Edge Function response format düzeltildi, Flutter JSON parsing güncellendi
 
-### 2. UI Overflow Hatası (Devam Ediyor)
+### 2. UI Overflow Hatası ✅ ÇÖZÜLDÜ
 **Hata:** `A RenderFlex overflowed by 5936 pixels on the bottom`
 **Lokasyon:** `lib/screens/meal_plan_display_screen.dart`
 **Sebep:** Uzun tarif metinleri UI'yi taşırıyor
-**Durum:** maxLines: 10 ve ellipsis eklendi ama hala overflow var
+**Durum:** ✅ Çözüldü - maxHeight constraints ve SingleChildScrollView eklendi
 
-### 3. API Response Format Sorunu
+### 3. API Response Format Sorunu ✅ ÇÖZÜLDÜ
 **Hata:** Edge Function `text/plain` döndürüyor, Flutter `application/json` bekliyor
 **Content-Type:** `text/plain;charset=UTF-8`
 **Beklenen:** `application/json`
-**Durum:** Edge Function response formatı düzeltilmeli
+**Durum:** ✅ Çözüldü - Content-Type: application/json; charset=utf-8 ayarlandı
+
+### 4. Yeni Tespit Edilen Sorunlar
+
+#### 4.1. Kas Kütlesi Hedefi İletilmiyor
+**Sorun:** "Hedeflerinizdeki kas kütlesi kazanmak/korumak istiyorum" kutusu Gemini'ye iletilmiyor
+**Lokasyon:** `lib/screens/profile_screen.dart` - Hedef seçimi
+**Sebep:** Profile screen'deki hedef seçimi prompt'a dahil edilmiyor
+**Durum:** 🔴 Düzeltilmeli
+
+#### 4.2. Egzersiz Detayları Eksik
+**Sorun:** Hareketler için beklenme süresi, doğru form, dikkat edilecek noktalar belirtilmiyor
+**Lokasyon:** `supabase/functions/zindeai-router/index.ts` - Workout prompt
+**Sebep:** Prompt'ta egzersiz detayları yeterince spesifik değil
+**Durum:** 🔴 Düzeltilmeli
+
+#### 4.3. Protein Miktarı Tutarsızlığı
+**Sorun:** Bazı günler az protein öneriyor, tutarlı protein dağılımı yok
+**Lokasyon:** `supabase/functions/zindeai-router/index.ts` - Meal prompt
+**Sebep:** Protein hedefi prompt'ta yeterince vurgulanmıyor
+**Durum:** 🔴 Düzeltilmeli
 
 ## 🔧 Yapılan Değişiklikler
 
@@ -175,10 +195,17 @@ supabase/
 
 ## 🚨 Acil Çözüm Gerekenler
 
-1. **Edge Function Response Format:** JSON string yerine proper JSON object döndürmeli
-2. **Content-Type Header:** `application/json` olmalı
-3. **UI Layout:** Overflow için daha iyi layout çözümü
-4. **Error Handling:** JSON parsing için daha robust error handling
+### ✅ Çözülenler
+1. **Edge Function Response Format:** JSON string yerine proper JSON object döndürmeli ✅
+2. **Content-Type Header:** `application/json` olmalı ✅
+3. **UI Layout:** Overflow için daha iyi layout çözümü ✅
+4. **Error Handling:** JSON parsing için daha robust error handling ✅
+
+### 🔴 Yeni Acil Çözüm Gerekenler
+1. **Kas Kütlesi Hedefi:** Profile screen'deki hedef seçimi prompt'a dahil edilmeli
+2. **Egzersiz Detayları:** Workout prompt'ına beklenme süresi, form, dikkat noktaları eklenmeli
+3. **Protein Tutarlılığı:** Meal prompt'ında protein hedefi daha spesifik belirtilmeli
+4. **Prompt Güncellemeleri:** Tüm prompt'lar kullanıcı hedeflerini daha iyi yansıtmalı
 
 ## 🤝 Katkıda Bulunma
 
