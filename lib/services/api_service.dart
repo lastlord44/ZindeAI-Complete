@@ -1,6 +1,4 @@
 import 'package:dio/dio.dart';
-import '../models/meal_plan.dart';
-import '../models/workout_plan.dart';
 import '../models/health_status.dart';
 import '../models/exercise.dart';
 import '../utils/logger.dart';
@@ -9,7 +7,6 @@ import 'smart_api_handler.dart';
 class ApiService {
   static const String baseUrl = 'http://localhost:3002/api';
   final Dio _dio;
-  final SmartApiHandler _smartHandler = SmartApiHandler();
 
   ApiService()
       : _dio = Dio(
@@ -36,13 +33,13 @@ class ApiService {
     ));
 
     // Smart handler'ı başlat
-    _smartHandler.initialize();
+    // SmartApiHandler zaten initialize edilmiş
 
     Logger.success('ApiService başarıyla başlatıldı', tag: 'ApiService');
   }
 
   // 1. Yemek Planı Oluştur - Smart Handler kullan
-  Future<MealPlan> createMealPlan({
+  Future<Map<String, dynamic>> createMealPlan({
     required int calories,
     required String goal,
     String diet = 'balanced',
@@ -71,25 +68,25 @@ class ApiService {
           tag: 'ApiService');
 
       // Smart handler kullan
-      final mealPlan = await _smartHandler.createMealPlan(
-        calories: calories,
+      final mealPlan = await SmartApiHandler.generateMealPlan(
+        calories: calories.toDouble(),
         goal: goal,
         diet: diet,
         daysPerWeek: daysPerWeek,
-        preferences: preferences,
-        // Profil bilgileri
-        age: age,
-        sex: sex,
-        weight: weight,
-        height: height,
-        activity: activity,
+        fullProfile: {
+          'age': age,
+          'gender': sex,
+          'weight': weight,
+          'height': height,
+          'activity_level': activity,
+        },
       );
 
       Logger.success('Yemek planı başarıyla oluşturuldu',
           tag: 'ApiService',
           data: {
-            'planTitle': mealPlan.planTitle,
-            'dailyPlanCount': mealPlan.dailyPlan.length,
+            'planTitle': mealPlan['plan_name'],
+            'dailyPlanCount': mealPlan['days']?.length ?? 0,
           });
 
       Logger.performanceEnd('createMealPlan', data: {
@@ -123,7 +120,7 @@ class ApiService {
   }
 
   // 2. Antrenman Planı Oluştur - Smart Handler kullan
-  Future<WorkoutPlan> createWorkoutPlan({
+  Future<Map<String, dynamic>> createWorkoutPlan({
     required String userId,
     required int age,
     required String gender,
@@ -162,30 +159,26 @@ class ApiService {
           tag: 'ApiService');
 
       // Smart handler kullan
-      final workoutPlan = await _smartHandler.createWorkoutPlan(
-        userId: userId,
-        age: age,
-        gender: gender,
-        weight: weight,
-        height: height,
-        fitnessLevel: fitnessLevel,
+      final workoutPlan = await SmartApiHandler.generateWorkoutPlan(
         goal: goal,
-        mode: mode,
         daysPerWeek: daysPerWeek,
-        preferredSplit: preferredSplit,
-        equipment: equipment,
-        injuries: injuries,
-        timePerSession: timePerSession,
+        level: fitnessLevel,
+        fullProfile: {
+          'age': age,
+          'gender': gender,
+          'weight': weight,
+          'height': height,
+          'fitness_level': fitnessLevel,
+        },
       );
 
       Logger.success('Antrenman planı başarıyla oluşturuldu',
           tag: 'ApiService',
           data: {
             'userId': userId,
-            'weekNumber': workoutPlan.weekNumber,
-            'splitType': workoutPlan.splitType,
-            'mode': workoutPlan.mode,
-            'daysCount': workoutPlan.days.length,
+            'planName': workoutPlan['plan_name'],
+            'splitType': workoutPlan['split_type'],
+            'daysCount': workoutPlan['weekly_schedule']?.length ?? 0,
           });
 
       Logger.performanceEnd('createWorkoutPlan', data: {

@@ -19,7 +19,7 @@ class WorkoutPlanDisplayScreen extends StatefulWidget {
 }
 
 class _WorkoutPlanDisplayScreenState extends State<WorkoutPlanDisplayScreen> {
-  WorkoutPlan? _workoutPlan;
+  Map<String, dynamic>? _workoutPlan;
   bool _isLoading = true;
   String? _error;
   int _selectedDay = DateTime.now().weekday; // 1=Pazartesi, 7=Pazar
@@ -114,7 +114,7 @@ class _WorkoutPlanDisplayScreenState extends State<WorkoutPlanDisplayScreen> {
 }
 
 class _WorkoutPlanView extends StatefulWidget {
-  final WorkoutPlan plan;
+  final Map<String, dynamic> plan;
   final int selectedDay;
   final ValueChanged<int> onDaySelected;
 
@@ -158,7 +158,7 @@ class _WorkoutPlanViewState extends State<_WorkoutPlanView> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            'Hafta ${widget.plan.weekNumber}',
+            widget.plan['plan_name'] ?? 'Antrenman Planı',
             style: const TextStyle(
               fontSize: 24,
               fontWeight: FontWeight.bold,
@@ -169,10 +169,10 @@ class _WorkoutPlanViewState extends State<_WorkoutPlanView> {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceAround,
             children: [
-              _buildSummaryItem('Hedef', widget.plan.goal, Colors.white),
-              _buildSummaryItem('Mod', widget.plan.mode, Colors.white),
+              _buildSummaryItem('Hedef', widget.plan['user_specs']?['goal'] ?? 'N/A', Colors.white),
+              _buildSummaryItem('Mod', widget.plan['user_specs']?['mode'] ?? 'N/A', Colors.white),
               _buildSummaryItem(
-                  'Gün Sayısı', '${widget.plan.days.length}', Colors.white),
+                  'Gün Sayısı', '${(widget.plan['weekly_schedule'] as List?)?.length ?? 0}', Colors.white),
             ],
           ),
         ],
@@ -245,8 +245,9 @@ class _WorkoutPlanViewState extends State<_WorkoutPlanView> {
             children: List.generate(7, (index) {
               final dayNumber = index + 1;
               final dayName = days[index];
-              final hasWorkout = widget.plan.days
-                  .any((day) => _getDayNumber(day.day) == dayNumber);
+              final weeklySchedule = widget.plan['weekly_schedule'] as List<dynamic>? ?? [];
+              final hasWorkout = weeklySchedule
+                  .any((day) => _getDayNumber(day['day'].toString()) == dayNumber);
               final isSelected = widget.selectedDay == dayNumber;
 
               return GestureDetector(
@@ -361,26 +362,28 @@ class _WorkoutPlanViewState extends State<_WorkoutPlanView> {
   }
 
   Widget _buildSelectedDayWorkout() {
-    final selectedDayWorkout = widget.plan.days.firstWhere(
-      (day) => _getDayNumber(day.day) == widget.selectedDay,
-      orElse: () => WorkoutDay(
-          day: widget.selectedDay.toString(),
-          focus: 'Dinlenme Günü',
-          exercises: []),
+    final weeklySchedule = widget.plan['weekly_schedule'] as List<dynamic>? ?? [];
+    final selectedDayWorkout = weeklySchedule.firstWhere(
+      (day) => _getDayNumber(day['day'].toString()) == widget.selectedDay,
+      orElse: () => {
+        'day': widget.selectedDay.toString(),
+        'focus': 'Dinlenme Günü',
+        'exercises': <dynamic>[]
+      },
     );
 
     // Debug: Seçili gün ve antrenman bilgilerini logla
     print('=== ANTRENMAN PLANI DEBUG ===');
     print('Selected day: ${widget.selectedDay}');
-    print('Available days: ${widget.plan.days.map((d) => d.day).toList()}');
+    print('Available days: ${weeklySchedule.map((d) => d['day']).toList()}');
     print(
-        'Selected workout: ${selectedDayWorkout.day} - ${selectedDayWorkout.focus}');
-    print('Exercises count: ${selectedDayWorkout.exercises.length}');
+        'Selected workout: ${selectedDayWorkout['day']} - ${selectedDayWorkout['focus']}');
+    print('Exercises count: ${(selectedDayWorkout['exercises'] as List?)?.length ?? 0}');
     print(
-        'All workouts: ${widget.plan.days.map((d) => '${d.day}: ${d.focus} (${d.exercises.length} egzersiz)').toList()}');
+        'All workouts: ${weeklySchedule.map((d) => '${d['day']}: ${d['focus']} (${(d['exercises'] as List?)?.length ?? 0} egzersiz)').toList()}');
     print('=============================');
 
-    if (selectedDayWorkout.exercises.isEmpty) {
+    if ((selectedDayWorkout['exercises'] as List?)?.isEmpty ?? true) {
       return const Card(
         child: Padding(
           padding: EdgeInsets.all(16.0),
@@ -399,7 +402,7 @@ class _WorkoutPlanViewState extends State<_WorkoutPlanView> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
-              'Gün ${selectedDayWorkout.day} - ${selectedDayWorkout.focus}',
+              'Gün ${selectedDayWorkout['day']} - ${selectedDayWorkout['focus']}',
               style: const TextStyle(
                 fontSize: 20,
                 fontWeight: FontWeight.bold,
@@ -415,7 +418,7 @@ class _WorkoutPlanViewState extends State<_WorkoutPlanView> {
               ),
             ),
             const SizedBox(height: 8),
-            ...selectedDayWorkout.exercises
+            ...(selectedDayWorkout['exercises'] as List<dynamic>? ?? [])
                 .map((exercise) => _buildExerciseCard(exercise)),
           ],
         ),
@@ -423,7 +426,7 @@ class _WorkoutPlanViewState extends State<_WorkoutPlanView> {
     );
   }
 
-  Widget _buildExerciseCard(Exercise exercise) {
+  Widget _buildExerciseCard(Map<String, dynamic> exercise) {
     return Card(
       margin: const EdgeInsets.only(bottom: 8.0),
       elevation: 2,
@@ -434,7 +437,7 @@ class _WorkoutPlanViewState extends State<_WorkoutPlanView> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
-              exercise.name,
+              exercise['name'] ?? 'Egzersiz',
               style: const TextStyle(
                 fontSize: 16,
                 fontWeight: FontWeight.bold,
@@ -445,9 +448,9 @@ class _WorkoutPlanViewState extends State<_WorkoutPlanView> {
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceAround,
               children: [
-                _buildExerciseStat('Setler', exercise.sets.toString()),
-                _buildExerciseStat('Tekrarlar', exercise.reps.toString()),
-                _buildExerciseStat('Dinlenme', exercise.rest.toString()),
+                _buildExerciseStat('Setler', exercise['sets']?.toString() ?? 'N/A'),
+                _buildExerciseStat('Tekrarlar', exercise['reps']?.toString() ?? 'N/A'),
+                _buildExerciseStat('Dinlenme', exercise['rest']?.toString() ?? 'N/A'),
               ],
             ),
           ],

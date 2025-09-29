@@ -20,7 +20,7 @@ class MealPlanDisplayScreen extends StatefulWidget {
 }
 
 class _MealPlanDisplayScreenState extends State<MealPlanDisplayScreen> {
-  MealPlan? _mealPlan;
+  Map<String, dynamic>? _mealPlan;
   bool _isLoading = true;
   String? _error;
   int _selectedDay = DateTime.now().weekday; // 1=Pazartesi, 7=Pazar
@@ -135,7 +135,8 @@ class _MealPlanDisplayScreenState extends State<MealPlanDisplayScreen> {
         content: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Text('Bu hafta toplam ${_mealPlan?.dailyPlan.length ?? 0} gün planınız var.'),
+            Text(
+                'Bu hafta toplam ${_mealPlan?['days']?.length ?? 0} gün planınız var.'),
             SizedBox(height: 16),
             ElevatedButton(
               onPressed: () => Navigator.pop(context),
@@ -162,7 +163,7 @@ class _MealPlanDisplayScreenState extends State<MealPlanDisplayScreen> {
               Navigator.push(
                 context,
                 MaterialPageRoute(
-                  builder: (_) => MealTrackerScreen(mealPlan: _mealPlan!.toJson()),
+                  builder: (_) => MealTrackerScreen(mealPlan: _mealPlan!),
                 ),
               );
             },
@@ -174,7 +175,7 @@ class _MealPlanDisplayScreenState extends State<MealPlanDisplayScreen> {
               Navigator.push(
                 context,
                 MaterialPageRoute(
-                  builder: (_) => ShoppingListScreen(mealPlan: _mealPlan!.toJson()),
+                  builder: (_) => ShoppingListScreen(mealPlan: _mealPlan!),
                 ),
               );
             },
@@ -207,7 +208,7 @@ class _MealPlanDisplayScreenState extends State<MealPlanDisplayScreen> {
 }
 
 class _MealPlanView extends StatefulWidget {
-  final MealPlan plan;
+  final Map<String, dynamic> plan;
 
   const _MealPlanView({required this.plan});
 
@@ -366,10 +367,15 @@ class _MealPlanViewState extends State<_MealPlanView> {
 
   Widget _buildSelectedDayDetails() {
     // API'den gelen day değeri 1-7 arası int, _selectedDay de 1-7 arası
-    final selectedDayPlan = widget.plan.dailyPlan.firstWhere(
-      (day) => _getDayNumber(day.day) == _selectedDay,
-      orElse: () => widget.plan.dailyPlan.first,
+    final days = widget.plan['days'] as List<dynamic>? ?? [];
+    final selectedDayPlan = days.firstWhere(
+      (day) => _getDayNumber(day['day'].toString()) == _selectedDay,
+      orElse: () => days.isNotEmpty ? days.first : null,
     );
+
+    if (selectedDayPlan == null) {
+      return const Center(child: Text('Bu gün için plan bulunamadı'));
+    }
 
     return ListView(
       padding: const EdgeInsets.all(16.0),
@@ -378,12 +384,13 @@ class _MealPlanViewState extends State<_MealPlanView> {
         _buildDailySummary(selectedDayPlan),
         const SizedBox(height: 16),
         // Öğün Detayları
-        ...selectedDayPlan.meals.map((meal) => _buildMealCard(meal)),
+        ...(selectedDayPlan['meals'] as List<dynamic>? ?? [])
+            .map((meal) => _buildMealCard(meal)),
       ],
     );
   }
 
-  Widget _buildDailySummary(DailyPlan dayPlan) {
+  Widget _buildDailySummary(Map<String, dynamic> dayPlan) {
     return Card(
       elevation: 4,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
@@ -393,7 +400,7 @@ class _MealPlanViewState extends State<_MealPlanView> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
-              'Gün ${dayPlan.day} - Günlük Özet',
+              'Gün ${dayPlan['day']} - Günlük Özet',
               style: const TextStyle(
                 fontSize: 20,
                 fontWeight: FontWeight.bold,
@@ -405,12 +412,13 @@ class _MealPlanViewState extends State<_MealPlanView> {
               mainAxisAlignment: MainAxisAlignment.spaceAround,
               children: [
                 _buildSummaryItem(
-                    'Kalori', '${dayPlan.totalCaloriesForDay}', 'kcal'),
+                    'Kalori', '${dayPlan['totals']?['calories'] ?? 0}', 'kcal'),
                 _buildSummaryItem(
-                    'Protein', '${dayPlan.totalProteinForDay}', 'g'),
+                    'Protein', '${dayPlan['totals']?['protein'] ?? 0}', 'g'),
                 _buildSummaryItem(
-                    'Karbonhidrat', '${dayPlan.totalCarbsForDay}', 'g'),
-                _buildSummaryItem('Yağ', '${dayPlan.totalFatForDay}', 'g'),
+                    'Karbonhidrat', '${dayPlan['totals']?['carbs'] ?? 0}', 'g'),
+                _buildSummaryItem(
+                    'Yağ', '${dayPlan['totals']?['fat'] ?? 0}', 'g'),
               ],
             ),
           ],
@@ -441,8 +449,8 @@ class _MealPlanViewState extends State<_MealPlanView> {
     );
   }
 
-  Widget _buildMealCard(Meal meal) {
-    final mealKey = '${_selectedDay}_${meal.name}';
+  Widget _buildMealCard(Map<String, dynamic> meal) {
+    final mealKey = '${_selectedDay}_${meal['name']}';
     final isConsumed = _mealConsumed[mealKey] ?? false;
 
     return Card(
@@ -455,7 +463,7 @@ class _MealPlanViewState extends State<_MealPlanView> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
-              meal.name,
+              meal['name'],
               style: const TextStyle(
                 fontSize: 18,
                 fontWeight: FontWeight.bold,
@@ -464,7 +472,7 @@ class _MealPlanViewState extends State<_MealPlanView> {
             ),
             const SizedBox(height: 8),
             // Yemek tarifi - Collapsible
-            if (meal.recipe != null && meal.recipe!.isNotEmpty)
+            if (meal['recipe'] != null && meal['recipe'].toString().isNotEmpty)
               Container(
                 width: double.infinity,
                 padding: const EdgeInsets.all(12.0),
@@ -489,7 +497,7 @@ class _MealPlanViewState extends State<_MealPlanView> {
                       constraints: BoxConstraints(maxHeight: 200), // Max height
                       child: SingleChildScrollView(
                         child: Text(
-                          meal.recipe!,
+                          meal['recipe'].toString(),
                           style: const TextStyle(fontSize: 14),
                         ),
                       ),
@@ -506,11 +514,11 @@ class _MealPlanViewState extends State<_MealPlanView> {
               child: SingleChildScrollView(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
-                  children: meal.items
+                  children: (meal['ingredients'] as List<dynamic>? ?? [])
                       .map((item) => Padding(
                             padding: const EdgeInsets.only(bottom: 4.0),
                             child: Text(
-                                '- ${item.name} (${item.quantity} ${item.unit})'),
+                                '- ${item['name']} (${item['amount']} ${item['unit']})'),
                           ))
                       .toList(),
                 ),
@@ -522,9 +530,9 @@ class _MealPlanViewState extends State<_MealPlanView> {
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceAround,
               children: [
-                _buildMacroChip('Protein', meal.totalProtein),
-                _buildMacroChip('Karb', meal.totalCarbs),
-                _buildMacroChip('Yağ', meal.totalFat),
+                _buildMacroChip('Protein', meal['protein']?.toDouble() ?? 0.0),
+                _buildMacroChip('Karb', meal['carbs']?.toDouble() ?? 0.0),
+                _buildMacroChip('Yağ', meal['fat']?.toDouble() ?? 0.0),
               ],
             ),
             const SizedBox(height: 12),

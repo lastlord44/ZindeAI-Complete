@@ -4,194 +4,258 @@ import 'dart:convert';
 
 class MealTrackerScreen extends StatefulWidget {
   final Map<String, dynamic> mealPlan;
-  
-  MealTrackerScreen({required this.mealPlan});
-  
+
+  const MealTrackerScreen({Key? key, required this.mealPlan}) : super(key: key);
+
   @override
   _MealTrackerScreenState createState() => _MealTrackerScreenState();
 }
 
 class _MealTrackerScreenState extends State<MealTrackerScreen> {
-  Map<String, Map<String, bool>> weeklyProgress = {};
+  Map<String, bool> mealStatus = {}; // meal_id -> eaten status
+  Map<String, DateTime?> mealTimes = {}; // meal_id -> eaten time
+  late int selectedDayIndex;
+  late DateTime currentDate;
   
   @override
   void initState() {
     super.initState();
-    _loadProgress();
-    _checkWeeklyReset();
+    currentDate = DateTime.now();
+    selectedDayIndex = currentDate.weekday - 1; // 0-6 index
+    if (selectedDayIndex > 6) selectedDayIndex = 0;
+    _loadMealStatus();
   }
   
-  // Pazar günü kontrolü ve sıfırlama
-  void _checkWeeklyReset() {
-    final now = DateTime.now();
-    if (now.weekday == DateTime.sunday && now.hour == 23 && now.minute >= 45) {
-      _resetWeeklyProgress();
-    }
-  }
-  
-  Future<void> _resetWeeklyProgress() async {
-    setState(() => weeklyProgress.clear());
-    await _saveProgress();
+  // Meal status'ları yükle
+  Future<void> _loadMealStatus() async {
+    final prefs = await SharedPreferences.getInstance();
+    final String? statusJson = prefs.getString('meal_status');
+    final String? timesJson = prefs.getString('meal_times');
     
-    // Haftalık rapor oluştur
-    _generateWeeklyReport();
-  }
-  
-  void _generateWeeklyReport() {
-    int totalMeals = 0;
-    int completedMeals = 0;
-    
-    weeklyProgress.forEach((day, meals) {
-      meals.forEach((meal, completed) {
-        totalMeals++;
-        if (completed) completedMeals++;
-      });
-    });
-    
-    final completionRate = (completedMeals / totalMeals * 100).toStringAsFixed(1);
-    
-    showDialog(
-      context: context,
-      builder: (_) => AlertDialog(
-        title: Text('📊 Haftalık Rapor'),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Text('Tamamlama Oranı: %$completionRate'),
-            Text('Yenilen Öğünler: $completedMeals/$totalMeals'),
-            SizedBox(height: 16),
-            ElevatedButton(
-              onPressed: () => _shareReport(completionRate),
-              child: Text('Raporu Paylaş'),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-  
-  Future<void> _toggleMealCompletion(String day, String mealName) async {
-    // Onay dialogu göster
-    final confirmed = await showDialog<bool>(
-      context: context,
-      builder: (_) => AlertDialog(
-        title: Text('Öğün Tamamlandı mı?'),
-        content: Text('$mealName öğününü yediniz mi?'),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context, false),
-            child: Text('Hayır'),
-          ),
-          ElevatedButton(
-            onPressed: () => Navigator.pop(context, true),
-            child: Text('Evet'),
-          ),
-        ],
-      ),
-    );
-    
-    if (confirmed == true) {
+    if (statusJson != null) {
       setState(() {
-        weeklyProgress[day] ??= {};
-        weeklyProgress[day]![mealName] = true;
+        Map<String, dynamic> decoded = json.decode(statusJson);
+        mealStatus = decoded.map((key, value) => MapEntry(key, value as bool));
       });
-      
-      await _saveProgress();
-      
-      // Başarı animasyonu
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('✅ $mealName tamamlandı!'),
-          backgroundColor: Colors.green,
+    }
+    
+    if (timesJson != null) {
+      setState(() {
+        Map<String, dynamic> decoded = json.decode(timesJson);
+        mealTimes = decoded.map((key, value) => 
+          MapEntry(key, value != null ? DateTime.parse(value) : null));
+      });
+    }
+  }
+  
+  // Meal status'ları kaydet
+  Future<void> _saveMealStatus() async {
+    final prefs = await SharedPreferences.getInstance();
+    
+    await prefs.setString('meal_status', json.encode(mealStatus));
+    
+    Map<String, String?> timesMap = mealTimes.map((key, value) =>
+      MapEntry(key, value?.toIso8601String()));
+    await prefs.setString('meal_times', json.encode(timesMap));
+  }
+  
+  // Öğün ID oluştur
+  String _getMealId(int dayIndex, int mealIndex) {
+    return 'day${dayIndex}_meal$mealIndex';
+  }
+  
+  // Öğün durumunu güncelle
+  void _updateMealStatus(String mealId, bool eaten) {
+    setState(() {
+      mealStatus[mealId] = eaten;
+      mealTimes[mealId] = eaten ? DateTime.now() : null;
+    });
+    _saveMealStatus();
+    
+    // Feedback
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(
+          eaten ? '✅ Öğün tamamlandı!' : '❌ Öğün iptal edildi',
+          style: TextStyle(fontWeight: FontWeight.bold),
         ),
-      );
-    }
+        backgroundColor: eaten ? Colors.green : Colors.red,
+        duration: Duration(seconds: 2),
+      ),
+    );
   }
-  
-  Future<void> _loadProgress() async {
-    try {
-      final prefs = await SharedPreferences.getInstance();
-      final progressJson = prefs.getString('meal_progress');
-      
-      if (progressJson != null) {
-        setState(() {
-          weeklyProgress = Map<String, Map<String, bool>>.from(
-            jsonDecode(progressJson)
-          );
-        });
-      }
-    } catch (e) {
-      print('Progress yükleme hatası: $e');
-    }
-  }
-  
-  Future<void> _saveProgress() async {
-    try {
-      final prefs = await SharedPreferences.getInstance();
-      await prefs.setString('meal_progress', jsonEncode(weeklyProgress));
-    } catch (e) {
-      print('Progress kaydetme hatası: $e');
-    }
-  }
-  
+
   @override
   Widget build(BuildContext context) {
-    final days = ['Pazartesi', 'Salı', 'Çarşamba', 'Perşembe', 'Cuma', 'Cumartesi', 'Pazar'];
-    final today = days[DateTime.now().weekday - 1];
+    // NULL KONTROLÜ VE YENİ FORMAT UYUMU
+    final days = widget.mealPlan['days'] as List<dynamic>?;
+    
+    if (days == null || days.isEmpty) {
+    return Scaffold(
+      appBar: AppBar(
+          title: Text('Öğün Takibi'),
+          backgroundColor: Colors.green,
+        ),
+        body: Center(
+            child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+              Icon(Icons.error_outline, size: 64, color: Colors.red),
+              SizedBox(height: 16),
+              Text(
+                'Beslenme planı bulunamadı!',
+                style: TextStyle(fontSize: 18),
+              ),
+              SizedBox(height: 8),
+                Text(
+                'Lütfen önce beslenme planı oluşturun.',
+                style: TextStyle(color: Colors.grey),
+                ),
+              ],
+            ),
+          ),
+      );
+    }
+    
+    // Geçerli günü al
+    final currentDay = selectedDayIndex < days.length 
+        ? days[selectedDayIndex] as Map<String, dynamic>
+        : days.first as Map<String, dynamic>;
+    
+    final meals = currentDay['meals'] as List<dynamic>? ?? [];
+    final dayTotals = currentDay['totals'] as Map<String, dynamic>?;
     
     return Scaffold(
       appBar: AppBar(
-        title: Text('Öğün Takibi'),
-        actions: [
-          IconButton(
-            icon: Icon(Icons.analytics),
-            onPressed: _showWeeklyStats,
+        title: Text('Günlük Öğün Takibi'),
+        backgroundColor: Colors.green,
+        elevation: 0,
+      ),
+      body: Container(
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.topCenter,
+            end: Alignment.bottomCenter,
+            colors: [Colors.green, Colors.green.shade50],
+            stops: [0.0, 0.3],
+          ),
+        ),
+                        child: Column(
+                          children: [
+            // Gün seçici
+            _buildDaySelector(days),
+            
+            // Günlük özet
+            if (dayTotals != null) _buildDailySummary(dayTotals, meals),
+            
+            // Öğün listesi
+            Expanded(
+              child: meals.isEmpty
+                  ? Center(
+                                  child: Text(
+                        'Bu gün için öğün planı yok',
+                        style: TextStyle(fontSize: 16, color: Colors.grey),
+                      ),
+                    )
+                  : ListView.builder(
+                      padding: EdgeInsets.all(16),
+                      itemCount: meals.length,
+                      itemBuilder: (context, index) {
+                        final meal = meals[index] as Map<String, dynamic>;
+                        final mealId = _getMealId(selectedDayIndex, index);
+                        final isEaten = mealStatus[mealId] ?? false;
+                        final eatenTime = mealTimes[mealId];
+                        
+                        return _buildMealCard(meal, mealId, isEaten, eatenTime);
+              },
+            ),
           ),
         ],
       ),
-      body: ListView.builder(
+      ),
+    );
+  }
+
+  // Gün seçici widget
+  Widget _buildDaySelector(List<dynamic> days) {
+    return Container(
+      height: 100,
+      padding: EdgeInsets.symmetric(vertical: 16),
+      child: ListView.builder(
+        scrollDirection: Axis.horizontal,
+        padding: EdgeInsets.symmetric(horizontal: 16),
         itemCount: days.length,
-        itemBuilder: (context, dayIndex) {
-          final day = days[dayIndex];
-          final isToday = day == today;
-          final dayMeals = widget.mealPlan['days'][dayIndex]['meals'];
-          
-          return Card(
-            color: isToday ? Theme.of(context).primaryColor.withOpacity(0.1) : null,
-            margin: EdgeInsets.all(8),
-            child: ExpansionTile(
-              title: Row(
-                children: [
-                  if (isToday) Icon(Icons.today, color: Theme.of(context).primaryColor),
-                  SizedBox(width: 8),
-                  Text(day, style: TextStyle(fontWeight: FontWeight.bold)),
-                  Spacer(),
-                  _buildDayProgress(day, dayMeals),
-                ],
-              ),
-              children: dayMeals.map<Widget>((meal) {
-                final isCompleted = weeklyProgress[day]?[meal['name']] ?? false;
-                
-                return ListTile(
-                  leading: Checkbox(
-                    value: isCompleted,
-                    onChanged: isCompleted ? null : (_) {
-                      _toggleMealCompletion(day, meal['name']);
-                    },
+        itemBuilder: (context, index) {
+          final day = days[index] as Map<String, dynamic>;
+          final dayName = day['day'] ?? 'Gün ${index + 1}';
+          final isSelected = index == selectedDayIndex;
+          final isToday = index == (DateTime.now().weekday - 1);
+
+        return GestureDetector(
+            onTap: () {
+              setState(() {
+                selectedDayIndex = index;
+              });
+            },
+            child: Container(
+              width: 80,
+              margin: EdgeInsets.symmetric(horizontal: 4),
+              decoration: BoxDecoration(
+                color: isSelected 
+                    ? Colors.green 
+                    : isToday 
+                        ? Colors.green.shade100 
+                        : Colors.white,
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(
+                  color: isToday ? Colors.green : Colors.grey.shade300,
+                  width: isToday ? 2 : 1,
+                ),
+                boxShadow: isSelected ? [
+                  BoxShadow(
+                    color: Colors.green.withOpacity(0.3),
+                    blurRadius: 8,
+                    offset: Offset(0, 4),
                   ),
-                  title: Text(
-                    meal['name'],
+                ] : [],
+              ),
+          child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+                  if (isToday)
+                    Container(
+                      padding: EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                      decoration: BoxDecoration(
+                        color: Colors.orange,
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                child: Text(
+                        'BUGÜN',
+                  style: TextStyle(
+                          fontSize: 10,
+                          color: Colors.white,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ),
+                  SizedBox(height: 4),
+                  Text(
+                    dayName.length > 3 ? dayName.substring(0, 3) : dayName,
                     style: TextStyle(
-                      decoration: isCompleted ? TextDecoration.lineThrough : null,
-                      color: isCompleted ? Colors.grey : null,
+                      color: isSelected ? Colors.white : Colors.black87,
+                      fontWeight: FontWeight.bold,
+                      fontSize: 14,
                     ),
                   ),
-                  subtitle: Text('${meal['calories']} kcal'),
-                  trailing: isCompleted 
-                    ? Icon(Icons.check_circle, color: Colors.green)
-                    : Icon(Icons.circle_outlined, color: Colors.grey),
-                );
-              }).toList(),
+              Text(
+                    '${index + 1}',
+                style: TextStyle(
+                      color: isSelected ? Colors.white70 : Colors.grey,
+                  fontSize: 12,
+                ),
+              ),
+            ],
+              ),
             ),
           );
         },
@@ -199,79 +263,363 @@ class _MealTrackerScreenState extends State<MealTrackerScreen> {
     );
   }
   
-  Widget _buildDayProgress(String day, List meals) {
-    final completed = meals.where((meal) => 
-      weeklyProgress[day]?[meal['name']] ?? false
-    ).length;
+  // Günlük özet widget
+  Widget _buildDailySummary(Map<String, dynamic> totals, List<dynamic> meals) {
+    // Yenilen öğün sayısı
+    int eatenCount = 0;
+    for (int i = 0; i < meals.length; i++) {
+      final mealId = _getMealId(selectedDayIndex, i);
+      if (mealStatus[mealId] == true) eatenCount++;
+    }
+    
+    // Yenilen kalori hesapla
+    double eatenCalories = 0;
+    double eatenProtein = 0;
+    for (int i = 0; i < meals.length; i++) {
+      final mealId = _getMealId(selectedDayIndex, i);
+      if (mealStatus[mealId] == true) {
+        final meal = meals[i] as Map<String, dynamic>;
+        eatenCalories += (meal['calories'] ?? 0).toDouble();
+        eatenProtein += (meal['protein'] ?? 0).toDouble();
+      }
+    }
+    
+    final totalCalories = (totals['calories'] ?? 0).toDouble();
+    final totalProtein = (totals['protein'] ?? 0).toDouble();
+    final progress = totalCalories > 0 ? eatenCalories / totalCalories : 0.0;
     
     return Container(
-      padding: EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      margin: EdgeInsets.all(16),
+      padding: EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: completed == meals.length ? Colors.green : Colors.orange,
-        borderRadius: BorderRadius.circular(12),
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.1),
+            blurRadius: 10,
+            offset: Offset(0, 5),
+          ),
+        ],
       ),
-      child: Text(
-        '$completed/${meals.length}',
-        style: TextStyle(color: Colors.white, fontSize: 12),
+      child: Column(
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceAround,
+        children: [
+              _buildSummaryItem(
+                'Öğünler',
+                '$eatenCount / ${meals.length}',
+                Icons.restaurant,
+                Colors.blue,
+              ),
+              _buildSummaryItem(
+                'Kalori',
+                '${eatenCalories.toStringAsFixed(0)} / ${totalCalories.toStringAsFixed(0)}',
+                Icons.local_fire_department,
+                Colors.orange,
+              ),
+              _buildSummaryItem(
+                'Protein',
+                '${eatenProtein.toStringAsFixed(0)}g / ${totalProtein.toStringAsFixed(0)}g',
+                Icons.fitness_center,
+                Colors.red,
+              ),
+            ],
+          ),
+          SizedBox(height: 16),
+          ClipRRect(
+            borderRadius: BorderRadius.circular(10),
+            child: LinearProgressIndicator(
+              value: progress,
+              minHeight: 8,
+              backgroundColor: Colors.grey.shade200,
+              valueColor: AlwaysStoppedAnimation<Color>(
+                progress >= 0.9 ? Colors.green : 
+                progress >= 0.6 ? Colors.orange : 
+                Colors.red,
+              ),
+            ),
+          ),
+          SizedBox(height: 8),
+          Text(
+            '${(progress * 100).toStringAsFixed(0)}% Tamamlandı',
+            style: TextStyle(
+              fontWeight: FontWeight.bold,
+              color: progress >= 0.9 ? Colors.green : Colors.grey,
+            ),
+          ),
+        ],
       ),
     );
   }
-  
-  void _showWeeklyStats() {
-    // Haftalık istatistikleri göster
-    int totalDays = 0;
-    int perfectDays = 0;
+
+  Widget _buildSummaryItem(String label, String value, IconData icon, Color color) {
+    return Column(
+      children: [
+        Icon(icon, color: color, size: 24),
+        SizedBox(height: 4),
+        Text(
+          label,
+          style: TextStyle(fontSize: 12, color: Colors.grey),
+        ),
+        Text(
+          value,
+          style: TextStyle(
+            fontSize: 14,
+            fontWeight: FontWeight.bold,
+            color: Colors.black87,
+          ),
+        ),
+      ],
+    );
+  }
+
+  // Öğün kartı widget
+  Widget _buildMealCard(Map<String, dynamic> meal, String mealId, bool isEaten, DateTime? eatenTime) {
+    final mealName = meal['name'] ?? 'Öğün';
+    final mealTime = meal['time'] ?? '';
+    final calories = meal['calories'] ?? 0;
+    final protein = meal['protein'] ?? 0;
+    final carbs = meal['carbs'] ?? 0;
+    final fat = meal['fat'] ?? 0;
+    final ingredients = meal['ingredients'] as List<dynamic>? ?? [];
     
-    weeklyProgress.forEach((day, meals) {
-      totalDays++;
-      if (meals.values.every((completed) => completed)) {
-        perfectDays++;
-      }
-    });
-    
-    showDialog(
-      context: context,
-      builder: (_) => AlertDialog(
-        title: Text('📈 Haftalık İstatistikler'),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            _buildStatRow('Mükemmel Günler', '$perfectDays/$totalDays'),
-            _buildStatRow('Toplam Öğünler', _calculateTotalMeals().toString()),
-            _buildStatRow('Uyum Oranı', _calculateComplianceRate()),
-          ],
+    return AnimatedContainer(
+      duration: Duration(milliseconds: 300),
+      margin: EdgeInsets.only(bottom: 16),
+      decoration: BoxDecoration(
+        color: isEaten ? Colors.green.shade50 : Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(
+          color: isEaten ? Colors.green : Colors.grey.shade200,
+          width: isEaten ? 2 : 1,
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: isEaten 
+                ? Colors.green.withOpacity(0.2) 
+                : Colors.black.withOpacity(0.05),
+            blurRadius: 10,
+            offset: Offset(0, 5),
+          ),
+        ],
+      ),
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(16),
+        child: Material(
+          color: Colors.transparent,
+          child: ExpansionTile(
+            tilePadding: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+            childrenPadding: EdgeInsets.all(16),
+            leading: AnimatedContainer(
+              duration: Duration(milliseconds: 300),
+              width: 50,
+              height: 50,
+              decoration: BoxDecoration(
+                color: isEaten ? Colors.green : Colors.grey.shade200,
+                shape: BoxShape.circle,
+              ),
+              child: Icon(
+                isEaten ? Icons.check_circle : Icons.restaurant,
+                color: Colors.white,
+                size: 28,
+              ),
+            ),
+            title: Row(
+              children: [
+                Expanded(
+                  child: Text(
+                    mealName,
+                    style: TextStyle(
+                      fontWeight: FontWeight.bold,
+                      fontSize: 16,
+                      decoration: isEaten ? TextDecoration.lineThrough : null,
+                      color: isEaten ? Colors.grey : Colors.black87,
+                    ),
+                  ),
+                ),
+                if (mealTime.isNotEmpty)
+                  Container(
+                    padding: EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                    decoration: BoxDecoration(
+                      color: Colors.blue.shade100,
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: Text(
+                      mealTime,
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: Colors.blue.shade700,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ),
+              ],
+            ),
+            subtitle: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                SizedBox(height: 8),
+                Row(
+                  children: [
+                    _buildMacroChip('🔥 $calories kcal', Colors.orange),
+                    SizedBox(width: 8),
+                    _buildMacroChip('💪 ${protein}g', Colors.red),
+                  ],
+                ),
+                if (isEaten && eatenTime != null) ...[
+                  SizedBox(height: 8),
+                  Text(
+                    '✅ ${_formatTime(eatenTime)} yenildi',
+                    style: TextStyle(
+                      color: Colors.green,
+                      fontSize: 12,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ],
+              ],
+            ),
+            children: [
+              // Makro detayları
+              Container(
+                padding: EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: Colors.grey.shade50,
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceAround,
+                  children: [
+                    _buildMacroDetail('Kalori', '$calories kcal', Colors.orange),
+                    _buildMacroDetail('Protein', '${protein}g', Colors.red),
+                    _buildMacroDetail('Karb', '${carbs}g', Colors.blue),
+                    _buildMacroDetail('Yağ', '${fat}g', Colors.purple),
+                  ],
+                ),
+              ),
+              
+              // Malzemeler
+              if (ingredients.isNotEmpty) ...[
+                SizedBox(height: 16),
+                Text(
+                  'Malzemeler:',
+                  style: TextStyle(fontWeight: FontWeight.bold),
+                ),
+                SizedBox(height: 8),
+                ...ingredients.map((ingredient) {
+                  final name = ingredient['name'] ?? '';
+                  final amount = ingredient['amount'] ?? '';
+                  final unit = ingredient['unit'] ?? '';
+                  
+                  return Padding(
+                    padding: EdgeInsets.symmetric(vertical: 2),
+                    child: Row(
+      children: [
+                        Icon(Icons.check_circle_outline, 
+                             size: 16, 
+                             color: isEaten ? Colors.green : Colors.grey),
+                        SizedBox(width: 8),
+                        Text(
+                          '$name - $amount $unit',
+                          style: TextStyle(
+                            decoration: isEaten ? TextDecoration.lineThrough : null,
+                            color: isEaten ? Colors.grey : Colors.black87,
+                          ),
+                        ),
+                      ],
+                    ),
+                  );
+                }).toList(),
+              ],
+              
+              // Aksiyon butonları
+              SizedBox(height: 16),
+              Row(
+        children: [
+                  Expanded(
+                    child: ElevatedButton.icon(
+                      onPressed: isEaten ? null : () => _updateMealStatus(mealId, true),
+                      icon: Icon(Icons.check_circle),
+                      label: Text('YEDİM'),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.green,
+                        foregroundColor: Colors.white,
+                        padding: EdgeInsets.symmetric(vertical: 12),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                      ),
+                    ),
+                  ),
+                  SizedBox(width: 12),
+                  Expanded(
+                    child: OutlinedButton.icon(
+                      onPressed: !isEaten ? null : () => _updateMealStatus(mealId, false),
+                      icon: Icon(Icons.cancel),
+                      label: Text('İPTAL'),
+                      style: OutlinedButton.styleFrom(
+                        foregroundColor: Colors.red,
+                        side: BorderSide(color: Colors.red),
+                        padding: EdgeInsets.symmetric(vertical: 12),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
         ),
       ),
     );
   }
   
-  Widget _buildStatRow(String label, String value) {
-    return Padding(
-      padding: EdgeInsets.symmetric(vertical: 4),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [
-          Text(label),
-          Text(value, style: TextStyle(fontWeight: FontWeight.bold)),
-        ],
+  Widget _buildMacroChip(String text, Color color) {
+    return Container(
+      padding: EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      decoration: BoxDecoration(
+        color: color.withOpacity(0.1),
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Text(
+        text,
+        style: TextStyle(
+          fontSize: 12,
+          color: color,
+          fontWeight: FontWeight.bold,
+        ),
       ),
     );
   }
   
-  int _calculateTotalMeals() {
-    int total = 0;
-    weeklyProgress.forEach((day, meals) {
-      total += meals.values.where((v) => v).length;
-    });
-    return total;
+  Widget _buildMacroDetail(String label, String value, Color color) {
+    return Column(
+      children: [
+        Text(
+          label,
+          style: TextStyle(
+            fontSize: 12,
+            color: Colors.grey,
+          ),
+        ),
+        SizedBox(height: 4),
+        Text(
+          value,
+          style: TextStyle(
+            fontSize: 14,
+            fontWeight: FontWeight.bold,
+            color: color,
+          ),
+        ),
+      ],
+    );
   }
   
-  String _calculateComplianceRate() {
-    // Uyum oranı hesaplama
-    return '85%'; // Gerçek hesaplama eklenecek
-  }
-  
-  void _shareReport(String rate) {
-    // Rapor paylaşma işlevi
+  String _formatTime(DateTime time) {
+    return '${time.hour.toString().padLeft(2, '0')}:${time.minute.toString().padLeft(2, '0')}';
   }
 }
