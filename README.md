@@ -125,148 +125,89 @@ supabase/
 - [x] JSON Parsing - String response handling eklendi
 - [x] UI Overflow - maxLines ve ellipsis eklendi
 
-## ❌ Mevcut Hatalar
+## 🚨 ACİL ÇÖZÜLMESİ GEREKEN HATALAR
 
-### 1. JSON Parsing Hatası ✅ ÇÖZÜLDÜ
-**Hata:** `NoSuchMethodError: Class 'String' has no instance getter 'keys'`
-**Lokasyon:** `lib/services/smart_api_handler.dart:302`
-**Sebep:** Edge Function JSON string döndürüyor, Flutter Map bekliyor
-**Durum:** ✅ Çözüldü - Edge Function response format düzeltildi, Flutter JSON parsing güncellendi
+### 1. 🔴 KRİTİK: Kas Kütlesi Checkbox'ı Kayboluyor
+**Sorun:** "Kas Kütlesini Korumak İstiyorum" checkbox'ı ilk başta görünüyor, sonra kayboluyor
+**Lokasyon:** `lib/screens/profile_screen.dart` - Hedef seçimi bölümü
+**Sebep:** State management hatası, checkbox state'i kayboluyor
+**Etki:** Kullanıcı kas koruma hedefini seçemiyor, protein hesaplaması yanlış oluyor
+**Durum:** 🔴 ACİL - Hemen düzeltilmeli
 
-### 2. UI Overflow Hatası ✅ ÇÖZÜLDÜ
-**Hata:** `A RenderFlex overflowed by 5936 pixels on the bottom`
-**Lokasyon:** `lib/screens/meal_plan_display_screen.dart`
-**Sebep:** Uzun tarif metinleri UI'yi taşırıyor
-**Durum:** ✅ Çözüldü - maxHeight constraints ve SingleChildScrollView eklendi
+### 2. 🔴 KRİTİK: Antrenman Planı Verisi Bulunamıyor
+**Sorun:** "Antrenman planı verisi bulunamadı" hatası
+**Lokasyon:** `lib/screens/workout_plan_display_screen.dart`
+**Sebep:** Edge Function'dan gelen veri formatı yanlış parse ediliyor
+**Etki:** Antrenman planı hiç görüntülenemiyor
+**Durum:** 🔴 ACİL - Hemen düzeltilmeli
 
-### 3. API Response Format Sorunu ✅ ÇÖZÜLDÜ
-**Hata:** Edge Function `text/plain` döndürüyor, Flutter `application/json` bekliyor
-**Content-Type:** `text/plain;charset=UTF-8`
-**Beklenen:** `application/json`
-**Durum:** ✅ Çözüldü - Content-Type: application/json; charset=utf-8 ayarlandı
-
-### 4. Yeni Tespit Edilen Sorunlar
-
-#### 4.1. Kas Kütlesi Hedefi İletilmiyor
-**Sorun:** "Hedeflerinizdeki kas kütlesi kazanmak/korumak istiyorum" kutusu Gemini'ye iletilmiyor
-**Lokasyon:** `lib/screens/profile_screen.dart` - Hedef seçimi
-**Sebep:** Profile screen'deki hedef seçimi prompt'a dahil edilmiyor
-**Durum:** 🔴 Düzeltilmeli
-
-#### 4.2. Egzersiz Detayları Eksik
-**Sorun:** Hareketler için beklenme süresi, doğru form, dikkat edilecek noktalar belirtilmiyor
-**Lokasyon:** `supabase/functions/zindeai-router/index.ts` - Workout prompt
-**Sebep:** Prompt'ta egzersiz detayları yeterince spesifik değil
-**Durum:** 🔴 Düzeltilmeli
-
-#### 4.3. Protein Miktarı Tutarsızlığı
-**Sorun:** Bazı günler az protein öneriyor, tutarlı protein dağılımı yok
-**Lokasyon:** `supabase/functions/zindeai-router/index.ts` - Meal prompt
-**Sebep:** Protein hedefi prompt'ta yeterince vurgulanmıyor
-**Durum:** 🔴 Düzeltilmeli
-
-### 5. Runtime Hatalar (Test Sonrası Tespit Edilen)
-
-#### 5.1. Antrenman Planı Hiç Gelmiyor
-**Sorun:** Edge Function 500 hatası veriyor, antrenman planı oluşturulamıyor
-**Hata:** `DioException [bad response]: 500 Internal Server Error`
-**Lokasyon:** `supabase/functions/zindeai-router/index.ts`
-**Sebep:** Edge Function'da workout plan generation hatası
-**Durum:** 🔴 Acil düzeltilmeli
-
-#### 5.2. Beslenme Planı JSON Parsing Hatası
+### 3. 🔴 KRİTİK: Beslenme Planı TypeError
 **Sorun:** `TypeError: Instance of '() => dynamic': type '() => dynamic' is not a subtype of type '(() => Map<String, Object>)?'`
 **Lokasyon:** `lib/screens/meal_plan_display_screen.dart:371`
 **Sebep:** `firstWhere` orElse callback'i yanlış tip döndürüyor
-**Durum:** 🔴 Acil düzeltilmeli
+**Etki:** Beslenme planı ekranı çöküyor
+**Durum:** 🔴 ACİL - Hemen düzeltilmeli
 
-#### 5.3. Öğün Takip Butonları Çalışmıyor
-**Sorun:** "Yedim/Yemedim" butonları tıklandığında görsel değişiklik olmuyor
-**Etki:** Kullanıcı öğün durumunu takip edemiyor
-**Beklenen:** Yeşil/kırmızı renk değişimi, çizgi çekme, buton kilitleme
-**Durum:** 🔴 Düzeltilmeli
+### 4. 🔴 KRİTİK: Edge Function 500 Hatası
+**Sorun:** Edge Function 500 Internal Server Error veriyor
+**Lokasyon:** `supabase/functions/zindeai-router/index.ts`
+**Sebep:** Yeni prompt formatı ile API çağrısı uyumsuz
+**Etki:** Hiçbir plan oluşturulamıyor
+**Durum:** 🔴 ACİL - Hemen düzeltilmeli
 
-#### 5.4. Takvim Günü Yanlış Gösteriliyor
-**Sorun:** Bugün Pazartesi olmasına rağmen Pazar gösteriliyor
-**Lokasyon:** `lib/screens/meal_plan_display_screen.dart` - `_selectedDay` initialization
-**Sebep:** `DateTime.now().weekday` 1-7 arası döndürüyor, UI 0-6 bekliyor olabilir
-**Durum:** 🔴 Düzeltilmeli
+## ✅ ÇÖZÜLEN HATALAR
 
-## 🔧 Yapılan Değişiklikler
+### 1. JSON Parsing Hatası ✅ ÇÖZÜLDÜ
+**Hata:** `NoSuchMethodError: Class 'String' has no instance getter 'keys'`
+**Durum:** ✅ Çözüldü - Edge Function response format düzeltildi
 
-### Edge Function (supabase/functions/zindeai-router/index.ts)
-- JWT authentication kaldırıldı
-- Gemini API doğrudan kullanımı
-- API Key: `AIzaSyDBKGbsPR3LRs7dRYqkn4_QXEMmUvv8wE0`
-- CORS headers güncellendi
-- Temiz kod yapısı
+### 2. UI Overflow Hatası ✅ ÇÖZÜLDÜ
+**Hata:** `A RenderFlex overflowed by 5936 pixels on the bottom`
+**Durum:** ✅ Çözüldü - Responsive layout eklendi
 
-### Flutter (lib/services/smart_api_handler.dart)
-- String response handling eklendi
-- JSON parsing güncellendi
-- Error handling iyileştirildi
+### 3. API Response Format Sorunu ✅ ÇÖZÜLDÜ
+**Hata:** Edge Function `text/plain` döndürüyor, Flutter `application/json` bekliyor
+**Durum:** ✅ Çözüldü - Content-Type düzeltildi
 
-### Flutter (lib/models/meal_plan.dart)
-- Recipe alanı eklendi
-- JSON parsing güncellendi
-- Tüm öğünler için recipe parsing
+## 🔧 YAPILACAKLAR LİSTESİ
 
-### Flutter (lib/screens/meal_plan_display_screen.dart)
-- ListView kullanımı
-- maxLines: 10 eklendi
-- TextOverflow.ellipsis eklendi
-- Recipe container eklendi
+### Acil (Bugün)
+1. **Kas Kütlesi Checkbox State Fix** - Profile screen'deki state management düzelt
+2. **Edge Function API Format Fix** - Yeni prompt formatına uygun API çağrısı
+3. **Meal Plan Display TypeError Fix** - firstWhere callback tip hatası
+4. **Workout Plan Data Parse Fix** - Veri formatı uyumsuzluğu
 
-## 🚨 Acil Çözüm Gerekenler
+### Önemli (Bu Hafta)
+1. **Öğün Takip Butonları** - Visual feedback ve state management
+2. **Takvim Günü Düzeltme** - Pazartesi başlangıç
+3. **Protein Hesaplama Tutarlılığı** - Prompt'ta protein hedefi vurgulama
+4. **Egzersiz Detayları** - Rest time, form tips, RPE değerleri
 
-### ✅ Çözülenler
-1. **Edge Function Response Format:** JSON string yerine proper JSON object döndürmeli ✅
-2. **Content-Type Header:** `application/json` olmalı ✅
-3. **UI Layout:** Overflow için daha iyi layout çözümü ✅
-4. **Error Handling:** JSON parsing için daha robust error handling ✅
+### İyileştirme (Gelecek)
+1. **Error Boundary** - Graceful error handling
+2. **Loading States** - Better UX during API calls
+3. **Offline Mode** - Local data persistence
+4. **Performance** - API response caching
 
-### 🔴 Yeni Acil Çözüm Gerekenler ✅ ÇÖZÜLDÜ
-1. **Kas Kütlesi Hedefi:** Profile screen'deki hedef seçimi prompt'a dahil edilmeli
-2. **Egzersiz Detayları:** Workout prompt'ına beklenme süresi, form, dikkat noktaları eklenmeli
-3. **Protein Tutarlılığı:** Meal prompt'ında protein hedefi daha spesifik belirtilmeli
-4. **Prompt Güncellemeleri:** Tüm prompt'lar kullanıcı hedeflerini daha iyi yansıtmalı
+## 📋 SON DURUM RAPORU
 
-## 🚨 Runtime Hatalar (Test Sonrası Tespit Edilen)
+### ✅ BAŞARILI DEĞİŞİKLİKLER
+- **Edge Function:** Profesyonel diyetisyen ve antrenör prompt'ları eklendi
+- **README:** Groq/Llama referansları kaldırıldı, sadece Gemini kullanılıyor
+- **GitHub:** Tüm değişiklikler push edildi
 
-### 1. Öğün Takibi "The method '[]' was called on null" Hatası
-- **Sorun:** MealTrackerScreen'de `widget.mealPlan['days'][dayIndex]['meals']` null dönüyor
-- **Etki:** Öğün takibi ekranı açılmıyor, uygulama çöküyor
-- **Hata:** `NoSuchMethodError: The method '[]' was called on null`
-- **Çözüm:** MealPlan JSON formatı düzeltilmeli, null kontrolleri eklenmeli
+### 🔴 MEVCUT DURUM
+- **Uygulama:** Chrome'da çalışıyor ama kritik hatalar var
+- **Kas Kütlesi Checkbox:** İlk görünüyor, sonra kayboluyor
+- **Antrenman Planı:** "Veri bulunamadı" hatası
+- **Beslenme Planı:** TypeError ile çöküyor
+- **Edge Function:** 500 hatası veriyor
 
-### 2. Alışveriş Listesi "forEach" Hatası
-- **Sorun:** ShoppingListScreen'de `widget.mealPlan['days']` null
-- **Etki:** Alışveriş listesi oluşturulamıyor
-- **Hata:** `NoSuchMethodError: The method 'forEach' was called on null`
-- **Çözüm:** MealPlan veri yapısı kontrol edilmeli
-
-### 3. Öğün Takip Butonları Çalışmıyor
-- **Sorun:** "Yedim/Yemedim" butonları tıklandığında görsel değişiklik olmuyor
-- **Etki:** Kullanıcı öğün durumunu takip edemiyor
-- **Beklenen:** Yeşil/kırmızı renk değişimi, çizgi çekme, buton kilitleme
-- **Çözüm:** State management ve UI güncellemeleri düzeltilmeli
-
-### 4. Antrenman Planı Detayları Hala Eksik
-- **Sorun:** Dinlenme süreleri "60-90 saniye" gibi belirsiz, doğru form bilgileri yok
-- **Etki:** Kullanıcılar egzersizleri yanlış yapabilir
-- **Beklenen:** Net dinlenme süreleri, detaylı form ipuçları, RPE değerleri
-- **Çözüm:** Workout prompt'ı daha detaylandırılmalı
-
-### 5. Antrenman Günleri Yanlış Dağıtılıyor
-- **Sorun:** 5 gün isteyen kullanıcıya "Bacak + Omuz" gibi yanlış kombinasyonlar veriliyor
-- **Etki:** Profesyonel olmayan antrenman programı
-- **Beklenen:** Push/Pull/Legs veya Upper/Lower gibi mantıklı split'ler
-- **Çözüm:** Workout prompt'ında split mantığı netleştirilmeli
-
-### 6. UI Overflow Hatası Devam Ediyor
-- **Sorun:** `RenderFlex overflowed by 128 pixels on the bottom`
-- **Etki:** Ekran düzgün görüntülenmiyor
-- **Çözüm:** Responsive layout düzeltmeleri yapılmalı
+### 🎯 ÖNCELİK SIRASI
+1. **Kas Kütlesi Checkbox State Fix** (En kritik)
+2. **Edge Function API Format Fix** 
+3. **Meal Plan Display TypeError Fix**
+4. **Workout Plan Data Parse Fix**
 
 ## 🤝 Katkıda Bulunma
 
