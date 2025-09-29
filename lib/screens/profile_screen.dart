@@ -388,6 +388,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
                               setState(() {
                                 _primaryGoal = value!;
                                 // Kilo verme seçilince kas koruma seçeneği göster
+                                // State'i koru - checkbox kaybolmasın
+                                if (_primaryGoal != 'Kilo Verme') {
+                                  _preserveMuscle = false;
+                                }
                               });
                             },
                           ),

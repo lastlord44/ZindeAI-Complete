@@ -45,10 +45,19 @@ class _WorkoutPlanDisplayScreenState extends State<WorkoutPlanDisplayScreen> {
 
   Map<String, dynamic>? _getCurrentDayData() {
     try {
-      final workoutPlan = widget.workoutPlanData['workoutPlan'];
-      if (workoutPlan == null || workoutPlan['days'] == null) return null;
-
-      final days = workoutPlan['days'] as List;
+      // Farklı veri formatlarını kontrol et
+      final workoutPlan = widget.workoutPlanData['workoutPlan'] ?? 
+                         widget.workoutPlanData['trainingPlan'] ?? 
+                         widget.workoutPlanData;
+      
+      if (workoutPlan == null) return null;
+      
+      // Days array'ini farklı yerlerden bul
+      final days = workoutPlan['days'] ?? 
+                  workoutPlan['weekly_schedule'] ?? 
+                  workoutPlan['workouts'];
+      
+      if (days == null || days is! List || days.isEmpty) return null;
 
       // Seçili günü bul
       final currentDay = days.firstWhere(

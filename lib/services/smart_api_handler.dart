@@ -26,11 +26,10 @@ class SmartApiHandler {
       print('  - Diyet: $diet');
       print('  - Gün sayısı: $daysPerWeek');
 
-      // Request body
+      // Request body - YENİ FORMAT
       final requestBody = {
-        'requestType': 'nutrition',
-        'userInfo': _createUserInfoString(calories, goal, diet, fullProfile),
-        'profile': fullProfile ??
+        'requestType': 'plan',
+        'data': fullProfile ??
             {
               'weight': 70,
               'height': 175,
@@ -185,10 +184,8 @@ class SmartApiHandler {
       print('  - Gün sayısı: $daysPerWeek');
 
       final requestBody = {
-        'requestType': 'workout',
-        'userInfo':
-            _createWorkoutUserInfo(goal, level, daysPerWeek, fullProfile),
-        'profile': fullProfile ??
+        'requestType': 'antrenman',
+        'data': fullProfile ??
             {
               'primary_goal': goal,
               'fitness_level': level,

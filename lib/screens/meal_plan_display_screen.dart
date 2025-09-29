@@ -370,7 +370,7 @@ class _MealPlanViewState extends State<_MealPlanView> {
     final days = widget.plan['days'] as List<dynamic>? ?? [];
     final selectedDayPlan = days.firstWhere(
       (day) => _getDayNumber(day['day'].toString()) == _selectedDay,
-      orElse: () => days.isNotEmpty ? days.first : null,
+      orElse: () => days.isNotEmpty ? days.first : <String, dynamic>{},
     );
 
     if (selectedDayPlan == null) {
