@@ -122,6 +122,63 @@ supabase/
 - [x] Detailed Recipe Requirements - Gramaj, pişirme yöntemi, süre bilgileri eklendi
 - [x] UI Improvements - Meal consumption tracking, workout day selection düzeltildi
 - [x] Security - Service account credentials environment variables'a taşındı
+- [x] 500 Internal Server Error - Vertex AI JWT authentication sorunu çözüldü
+- [x] API Timeout Issues - 60 saniye timeout sorunu çözüldü
+- [x] Build Errors - Meal model recipe alanı eklendi
+- [x] JSON Parsing - String response handling eklendi
+- [x] UI Overflow - maxLines ve ellipsis eklendi
+
+## ❌ Mevcut Hatalar
+
+### 1. JSON Parsing Hatası (Devam Ediyor)
+**Hata:** `NoSuchMethodError: Class 'String' has no instance getter 'keys'`
+**Lokasyon:** `lib/services/smart_api_handler.dart:302`
+**Sebep:** Edge Function JSON string döndürüyor, Flutter Map bekliyor
+**Durum:** Çözülmedi - String response handling eklendi ama hala çalışmıyor
+
+### 2. UI Overflow Hatası (Devam Ediyor)
+**Hata:** `A RenderFlex overflowed by 5936 pixels on the bottom`
+**Lokasyon:** `lib/screens/meal_plan_display_screen.dart`
+**Sebep:** Uzun tarif metinleri UI'yi taşırıyor
+**Durum:** maxLines: 10 ve ellipsis eklendi ama hala overflow var
+
+### 3. API Response Format Sorunu
+**Hata:** Edge Function `text/plain` döndürüyor, Flutter `application/json` bekliyor
+**Content-Type:** `text/plain;charset=UTF-8`
+**Beklenen:** `application/json`
+**Durum:** Edge Function response formatı düzeltilmeli
+
+## 🔧 Yapılan Değişiklikler
+
+### Edge Function (supabase/functions/zindeai-router/index.ts)
+- JWT authentication kaldırıldı
+- Gemini API doğrudan kullanımı
+- API Key: `AIzaSyDBKGbsPR3LRs7dRYqkn4_QXEMmUvv8wE0`
+- CORS headers güncellendi
+- Temiz kod yapısı
+
+### Flutter (lib/services/smart_api_handler.dart)
+- String response handling eklendi
+- JSON parsing güncellendi
+- Error handling iyileştirildi
+
+### Flutter (lib/models/meal_plan.dart)
+- Recipe alanı eklendi
+- JSON parsing güncellendi
+- Tüm öğünler için recipe parsing
+
+### Flutter (lib/screens/meal_plan_display_screen.dart)
+- ListView kullanımı
+- maxLines: 10 eklendi
+- TextOverflow.ellipsis eklendi
+- Recipe container eklendi
+
+## 🚨 Acil Çözüm Gerekenler
+
+1. **Edge Function Response Format:** JSON string yerine proper JSON object döndürmeli
+2. **Content-Type Header:** `application/json` olmalı
+3. **UI Layout:** Overflow için daha iyi layout çözümü
+4. **Error Handling:** JSON parsing için daha robust error handling
 
 ## 🤝 Katkıda Bulunma
 
