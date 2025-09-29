@@ -1,10 +1,75 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts"
-  
-  const corsHeaders = {
-    'Access-Control-Allow-Origin': '*',
-    'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+
+const corsHeaders = {
+  'Access-Control-Allow-Origin': '*',
+  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
   'Access-Control-Allow-Methods': 'POST, GET, OPTIONS',
 }
+
+// JSON temizleme fonksiyonu
+const cleanJsonString = (str: string): string => {
+  // Markdown kod bloklarını temizle
+  str = str.replace(/```json\s*/gi, '');
+  str = str.replace(/```\s*/gi, '');
+  
+  // JSON'u bul ve çıkar
+  const jsonMatch = str.match(/\{[\s\S]*\}/);
+  if (!jsonMatch) {
+    throw new Error('Valid JSON not found');
+  }
+  
+  return jsonMatch[0];
+};
+
+// Güvenli beslenme planı formatı
+const createSafeMealPlan = (rawPlan: any) => {
+  const safePlan = {
+    days: [],
+    totalCalories: 0,
+    macros: {
+      protein: 0,
+      carbs: 0,
+      fats: 0
+    }
+  };
+  
+  // 7 gün için boş plan oluştur
+  for (let i = 0; i < 7; i++) {
+    safePlan.days.push({
+      day: i + 1,
+      dayName: ['Pazartesi', 'Salı', 'Çarşamba', 'Perşembe', 'Cuma', 'Cumartesi', 'Pazar'][i],
+      meals: {
+        sabah: null,
+        ara_ogun_1: null,
+        ogle: null,
+        ara_ogun_2: null,
+        aksam: null
+      },
+      totalCalories: 0
+    });
+  }
+  
+  // Gerçek veriyi doldur
+  if (rawPlan && rawPlan.days && Array.isArray(rawPlan.days)) {
+    rawPlan.days.forEach((day, index) => {
+      if (index < 7 && day && day.meals) {
+        safePlan.days[index].meals = {
+          sabah: day.meals.sabah || { name: 'Kahvaltı', calories: 0, ingredients: [] },
+          ara_ogun_1: day.meals.ara_ogun_1 || { name: 'Ara Öğün', calories: 0, ingredients: [] },
+          ogle: day.meals.ogle || { name: 'Öğle Yemeği', calories: 0, ingredients: [] },
+          ara_ogun_2: day.meals.ara_ogun_2 || { name: 'Ara Öğün', calories: 0, ingredients: [] },
+          aksam: day.meals.aksam || { name: 'Akşam Yemeği', calories: 0, ingredients: [] }
+        };
+        safePlan.days[index].totalCalories = day.totalCalories || 0;
+      }
+    });
+  }
+  
+  safePlan.totalCalories = rawPlan.totalCalories || 0;
+  safePlan.macros = rawPlan.macros || safePlan.macros;
+  
+  return safePlan;
+};
 
 serve(async (req) => {
   // CORS handling
@@ -336,8 +401,57 @@ async function generateWorkoutPlan(params: any) {
   console.log('Days:', actualDays)
   console.log('Mode:', actualMode)
 
-  const prompt = `Sen profesyonel bir fitness koçusun. Kullanıcının bilgilerine göre BİLİMSEL ve DETAYLI antrenman planı oluştur.
-      
+  const prompt = `${actualDays} günlük ${actualFitnessLevel} seviye antrenman planı oluştur.
+
+ZORUNLU KURALLAR:
+1. Her egzersiz için MUTLAKA şu formatı kullan:
+   - Set sayısı: Tam sayı (örn: 3)
+   - Tekrar: Tam sayı veya aralık (örn: 12 veya 8-10)
+   - Dinlenme: Saniye cinsinden tam sayı (örn: 60, 90, 120)
+   - RPE: 1-10 arası sayı (örn: 7)
+   - Form ipucu: Kısa ve net açıklama
+
+2. Split Dağılımı:
+   - 3 gün: Full Body (her gün)
+   - 4 gün: Upper/Lower/Upper/Lower
+   - 5 gün: Push/Pull/Legs/Upper/Lower
+   - 6 gün: Push/Pull/Legs tekrarı
+
+3. JSON formatı:
+{
+  "trainingPlan": {
+    "days": [
+      {
+        "day": 1,
+        "name": "Push Day",
+        "exercises": [
+          {
+            "name": "Bench Press",
+            "targetMuscle": "Göğüs",
+            "sets": 4,
+            "reps": "8-10",
+            "rest": 90,
+            "rpe": 7,
+            "formTip": "Omuzları geriye çek, göğsü dışarı çıkar"
+          }
+        ]
+      }
+    ],
+    "weeklyVolume": {
+      "chest": 12,
+      "back": 12,
+      "shoulders": 8,
+      "legs": 16,
+      "arms": 8
+    }
+  }
+}
+
+YASAKLAR:
+- "60-90 saniye" gibi belirsiz dinlenme süreleri KULLANMA
+- Boş veya null değer bırakma
+- Mantıksız kas grubu kombinasyonları yapma
+
 KULLANICI BİLGİLERİ:
 - Yaş: ${actualAge}
 - Cinsiyet: ${actualSex}
@@ -347,19 +461,6 @@ KULLANICI BİLGİLERİ:
 - Fitness Seviyesi: ${actualFitnessLevel}
 - Haftalık Antrenman: ${actualDays} gün
 - Antrenman Yeri: ${actualMode}
-
-ZORUNLU SPLIT KURALLARI:
-- 3 gün: Full Body (Pazartesi, Çarşamba, Cuma)
-- 4 gün: Upper/Lower Split (Pazartesi: Upper, Salı: Lower, Perşembe: Upper, Cuma: Lower)
-- 5 gün: Push/Pull/Legs + Upper/Lower (Pazartesi: Push, Salı: Pull, Çarşamba: Legs, Perşembe: Upper, Cuma: Lower)
-- 6 gün: Push/Pull/Legs x2 (PPL-PPL)
-
-HER EGZERSİZ İÇİN ZORUNLU BİLGİLER:
-1. Set sayısı (örn: "3 set")
-2. Tekrar aralığı (örn: "8-10 tekrar")
-3. Dinlenme süresi TAM OLARAK (örn: "90 saniye" - ASLA "60-90 saniye" gibi aralık verme)
-4. RPE değeri (6-10 arası, örn: "RPE 8")
-5. Form ipuçları (en az 2 madde)
 
 ONAYLANMIŞ EGZERSİZ LİSTESİ:
 [GÖĞÜS]
@@ -522,25 +623,27 @@ JSON FORMATI - MUTLAKA BU FORMATTA DÖN:
       console.log('Generated text preview:', generatedText.substring(0, 200) + '...')
     
       try {
-    // JSON'u parse et
-        const jsonMatch = generatedText.match(/\{[\s\S]*\}/)
-    if (!jsonMatch) {
-          throw new Error('No JSON found in Gemini response')
+        // JSON'u temizle ve parse et
+        const cleanedJson = cleanJsonString(generatedText)
+        const workoutPlan = JSON.parse(cleanedJson)
+        
+        // Güvenli format kontrolü
+        if (!workoutPlan.trainingPlan || !workoutPlan.trainingPlan.days) {
+          throw new Error('Invalid workout plan structure')
         }
         
-        const workoutPlan = JSON.parse(jsonMatch[0])
         console.log('✅ Workout plan JSON parsed successfully')
         
         // Debug: Tüm workout planını logla
         console.log('=== GEMINI WORKOUT PLAN DEBUG ===')
         console.log('Full workout plan:', JSON.stringify(workoutPlan, null, 2))
         
-        if (workoutPlan.workouts && workoutPlan.workouts.length > 0) {
+        if (workoutPlan.trainingPlan.days && workoutPlan.trainingPlan.days.length > 0) {
           console.log('=== WORKOUT KONTROLÜ ===')
-          workoutPlan.workouts.forEach((workout: any, index: number) => {
-            console.log(`Gün ${workout.day}: ${workout.name} - ${workout.exercises?.length || 0} egzersiz`)
-            if (workout.exercises) {
-              workout.exercises.forEach((exercise: any, exIndex: number) => {
+          workoutPlan.trainingPlan.days.forEach((day: any, index: number) => {
+            console.log(`Gün ${day.day}: ${day.name} - ${day.exercises?.length || 0} egzersiz`)
+            if (day.exercises) {
+              day.exercises.forEach((exercise: any, exIndex: number) => {
                 console.log(`  ${exIndex + 1}. ${exercise.name} - ${exercise.sets} set x ${exercise.reps} tekrar`)
               })
             }

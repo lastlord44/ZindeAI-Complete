@@ -8,17 +8,20 @@ import 'package:flutter/services.dart';
 
 class WorkoutPlanDisplayScreen extends StatefulWidget {
   final Map<String, dynamic> workoutPlanData;
-  
-  const WorkoutPlanDisplayScreen({Key? key, required this.workoutPlanData}) : super(key: key);
-  
+
+  const WorkoutPlanDisplayScreen({Key? key, required this.workoutPlanData})
+      : super(key: key);
+
   @override
-  _WorkoutPlanDisplayScreenState createState() => _WorkoutPlanDisplayScreenState();
+  _WorkoutPlanDisplayScreenState createState() =>
+      _WorkoutPlanDisplayScreenState();
 }
 
 class _WorkoutPlanDisplayScreenState extends State<WorkoutPlanDisplayScreen> {
   late int _selectedDay;
-  Map<String, Map<String, bool>> _exerciseCompletion = {}; // day -> exercise -> completed
-  
+  Map<String, Map<String, bool>> _exerciseCompletion =
+      {}; // day -> exercise -> completed
+
   @override
   void initState() {
     super.initState();
@@ -26,7 +29,7 @@ class _WorkoutPlanDisplayScreenState extends State<WorkoutPlanDisplayScreen> {
     _selectedDay = 0; // Default olarak ilk gün
     _initializeExerciseCompletion();
   }
-  
+
   void _initializeExerciseCompletion() {
     final workoutPlan = widget.workoutPlanData['workoutPlan'];
     if (workoutPlan != null && workoutPlan['days'] != null) {
@@ -44,15 +47,15 @@ class _WorkoutPlanDisplayScreenState extends State<WorkoutPlanDisplayScreen> {
     try {
       final workoutPlan = widget.workoutPlanData['workoutPlan'];
       if (workoutPlan == null || workoutPlan['days'] == null) return null;
-      
+
       final days = workoutPlan['days'] as List;
-      
+
       // Seçili günü bul
       final currentDay = days.firstWhere(
         (day) => day['day'] == _selectedDay + 1,
         orElse: () => null,
       );
-      
+
       return currentDay as Map<String, dynamic>?;
     } catch (e) {
       print('Error getting current day data: $e');
@@ -64,7 +67,7 @@ class _WorkoutPlanDisplayScreenState extends State<WorkoutPlanDisplayScreen> {
   Widget build(BuildContext context) {
     final workoutPlan = widget.workoutPlanData['workoutPlan'];
     final dayData = _getCurrentDayData();
-    
+
     if (workoutPlan == null || dayData == null) {
       return Scaffold(
         appBar: AppBar(
@@ -75,7 +78,7 @@ class _WorkoutPlanDisplayScreenState extends State<WorkoutPlanDisplayScreen> {
         ),
       );
     }
-    
+
     return Scaffold(
       appBar: AppBar(
         title: Text('Antrenman Planı'),
@@ -136,10 +139,10 @@ class _WorkoutPlanDisplayScreenState extends State<WorkoutPlanDisplayScreen> {
               ],
             ),
           ),
-          
+
           // Gün Seçici
           _buildDaySelector(workoutPlan['days']),
-          
+
           // Gün Başlığı
           Container(
             width: double.infinity,
@@ -153,7 +156,7 @@ class _WorkoutPlanDisplayScreenState extends State<WorkoutPlanDisplayScreen> {
               ),
             ),
           ),
-          
+
           // Egzersizler Listesi
           Expanded(
             child: ListView.builder(
@@ -180,7 +183,7 @@ class _WorkoutPlanDisplayScreenState extends State<WorkoutPlanDisplayScreen> {
         itemBuilder: (context, index) {
           final day = days[index];
           bool isSelected = _selectedDay == index;
-          
+
           return GestureDetector(
             onTap: () {
               setState(() => _selectedDay = index);
@@ -190,21 +193,25 @@ class _WorkoutPlanDisplayScreenState extends State<WorkoutPlanDisplayScreen> {
               width: 100,
               margin: EdgeInsets.only(right: 12),
               decoration: BoxDecoration(
-                color: isSelected ? Theme.of(context).primaryColor : Colors.white,
+                color:
+                    isSelected ? Theme.of(context).primaryColor : Colors.white,
                 borderRadius: BorderRadius.circular(12),
                 border: Border.all(
-                  color: isSelected 
-                    ? Theme.of(context).primaryColor 
-                    : Colors.grey[300]!,
+                  color: isSelected
+                      ? Theme.of(context).primaryColor
+                      : Colors.grey[300]!,
                   width: 2,
                 ),
-                boxShadow: isSelected ? [
-                  BoxShadow(
-                    color: Theme.of(context).primaryColor.withOpacity(0.3),
-                    blurRadius: 8,
-                    offset: Offset(0, 4),
-                  ),
-                ] : [],
+                boxShadow: isSelected
+                    ? [
+                        BoxShadow(
+                          color:
+                              Theme.of(context).primaryColor.withOpacity(0.3),
+                          blurRadius: 8,
+                          offset: Offset(0, 4),
+                        ),
+                      ]
+                    : [],
               ),
               child: Center(
                 child: Column(
@@ -238,7 +245,7 @@ class _WorkoutPlanDisplayScreenState extends State<WorkoutPlanDisplayScreen> {
 
   Widget _buildExerciseCard(Map<String, dynamic> exercise, String dayKey) {
     bool isCompleted = _exerciseCompletion[dayKey]?[exercise['name']] ?? false;
-    
+
     return Card(
       margin: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
       elevation: 3,
@@ -291,14 +298,15 @@ class _WorkoutPlanDisplayScreenState extends State<WorkoutPlanDisplayScreen> {
               // RPE (Zorluk) Göstergesi
               Row(
                 children: [
-                  Text('Zorluk: ', style: TextStyle(fontWeight: FontWeight.w500)),
+                  Text('Zorluk: ',
+                      style: TextStyle(fontWeight: FontWeight.w500)),
                   ...List.generate(10, (index) {
                     return Icon(
                       Icons.circle,
                       size: 12,
-                      color: index < (exercise['rpe'] ?? 7) 
-                        ? _getRPEColor(exercise['rpe'] ?? 7) 
-                        : Colors.grey[300],
+                      color: index < (exercise['rpe'] ?? 7)
+                          ? _getRPEColor(exercise['rpe'] ?? 7)
+                          : Colors.grey[300],
                     );
                   }),
                   SizedBox(width: 8),
@@ -327,7 +335,8 @@ class _WorkoutPlanDisplayScreenState extends State<WorkoutPlanDisplayScreen> {
                       Icons.accessibility_new,
                       Wrap(
                         spacing: 8,
-                        children: (exercise['targetMuscles'] as List).map((muscle) {
+                        children:
+                            (exercise['targetMuscles'] as List).map((muscle) {
                           return Chip(
                             label: Text(
                               muscle,
@@ -338,9 +347,9 @@ class _WorkoutPlanDisplayScreenState extends State<WorkoutPlanDisplayScreen> {
                         }).toList(),
                       ),
                     ),
-                  
+
                   SizedBox(height: 16),
-                  
+
                   // Doğru Form İpuçları
                   if (exercise['executionTips'] != null)
                     _buildDetailSection(
@@ -348,13 +357,15 @@ class _WorkoutPlanDisplayScreenState extends State<WorkoutPlanDisplayScreen> {
                       Icons.check_circle_outline,
                       Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
-                        children: (exercise['executionTips'] as List).map((tip) {
+                        children:
+                            (exercise['executionTips'] as List).map((tip) {
                           return Padding(
                             padding: EdgeInsets.only(bottom: 8),
                             child: Row(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
-                                Icon(Icons.check, size: 16, color: Colors.green),
+                                Icon(Icons.check,
+                                    size: 16, color: Colors.green),
                                 SizedBox(width: 8),
                                 Expanded(
                                   child: Text(
@@ -368,9 +379,9 @@ class _WorkoutPlanDisplayScreenState extends State<WorkoutPlanDisplayScreen> {
                         }).toList(),
                       ),
                     ),
-                  
+
                   SizedBox(height: 16),
-                  
+
                   // Sık Yapılan Hatalar
                   if (exercise['commonMistakes'] != null)
                     _buildDetailSection(
@@ -378,7 +389,8 @@ class _WorkoutPlanDisplayScreenState extends State<WorkoutPlanDisplayScreen> {
                       Icons.warning_amber_outlined,
                       Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
-                        children: (exercise['commonMistakes'] as List).map((mistake) {
+                        children:
+                            (exercise['commonMistakes'] as List).map((mistake) {
                           return Padding(
                             padding: EdgeInsets.only(bottom: 8),
                             child: Row(
@@ -461,8 +473,10 @@ class _WorkoutPlanDisplayScreenState extends State<WorkoutPlanDisplayScreen> {
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            _buildInfoRow('Program Tipi', workoutPlan['programType'] ?? 'Belirtilmemiş'),
-            _buildInfoRow('Haftalık Sıklık', '${workoutPlan['weeklyFrequency']} gün'),
+            _buildInfoRow(
+                'Program Tipi', workoutPlan['programType'] ?? 'Belirtilmemiş'),
+            _buildInfoRow(
+                'Haftalık Sıklık', '${workoutPlan['weeklyFrequency']} gün'),
             _buildInfoRow('Hedef', workoutPlan['goal'] ?? 'Belirtilmemiş'),
             SizedBox(height: 16),
             Text(

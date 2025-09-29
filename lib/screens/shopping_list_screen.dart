@@ -2,9 +2,10 @@ import 'package:flutter/material.dart';
 
 class ShoppingListScreen extends StatefulWidget {
   final Map<String, dynamic> mealPlan;
-  
-  const ShoppingListScreen({Key? key, required this.mealPlan}) : super(key: key);
-  
+
+  const ShoppingListScreen({Key? key, required this.mealPlan})
+      : super(key: key);
+
   @override
   _ShoppingListScreenState createState() => _ShoppingListScreenState();
 }
@@ -14,7 +15,7 @@ class _ShoppingListScreenState extends State<ShoppingListScreen> {
   Map<String, bool> checkedItems = {};
   List<int> selectedDays = []; // Hangi günler seçili
   String selectedCategory = 'Tümü';
-  
+
   @override
   void initState() {
     super.initState();
@@ -22,45 +23,46 @@ class _ShoppingListScreenState extends State<ShoppingListScreen> {
     selectedDays = [0, 1, 2];
     _generateShoppingList();
   }
-  
+
   void _generateShoppingList() {
     groceryItems.clear();
-    
+
     // NULL KONTROLÜ VE YENİ FORMAT UYUMU
     final days = widget.mealPlan['days'] as List<dynamic>?;
-    
+
     if (days == null || days.isEmpty) {
       // Veri yoksa boş liste göster
       setState(() {});
       return;
     }
-    
+
     // Seçili günlerdeki yemekleri topla
     for (int dayIndex in selectedDays) {
       if (dayIndex >= days.length) continue;
-      
+
       final day = days[dayIndex] as Map<String, dynamic>;
       final meals = day['meals'] as List<dynamic>? ?? [];
-      
+
       for (var meal in meals) {
         final ingredients = meal['ingredients'] as List<dynamic>? ?? [];
-        
+
         for (var ingredient in ingredients) {
           final name = ingredient['name']?.toString() ?? '';
           final amount = ingredient['amount']?.toString() ?? '0';
           final unit = ingredient['unit']?.toString() ?? '';
-          
+
           if (name.isEmpty) continue;
-          
+
           // Malzemeyi kategorize et
           final category = _categorizeIngredient(name.toLowerCase());
-          
+
           // Miktarları topla
           if (groceryItems.containsKey(name)) {
             final existing = groceryItems[name]!;
-            final existingAmount = double.tryParse(existing['amount'].toString()) ?? 0;
+            final existingAmount =
+                double.tryParse(existing['amount'].toString()) ?? 0;
             final newAmount = double.tryParse(amount) ?? 0;
-            
+
             groceryItems[name] = {
               'amount': (existingAmount + newAmount).toString(),
               'unit': unit,
@@ -76,41 +78,67 @@ class _ShoppingListScreenState extends State<ShoppingListScreen> {
         }
       }
     }
-    
+
     setState(() {});
   }
-  
+
   String _categorizeIngredient(String name) {
     // Protein
-    if (name.contains('et') || name.contains('tavuk') || name.contains('balık') || 
-        name.contains('yumurta') || name.contains('peynir') || name.contains('süt') ||
-        name.contains('yoğurt') || name.contains('protein')) {
+    if (name.contains('et') ||
+        name.contains('tavuk') ||
+        name.contains('balık') ||
+        name.contains('yumurta') ||
+        name.contains('peynir') ||
+        name.contains('süt') ||
+        name.contains('yoğurt') ||
+        name.contains('protein')) {
       return 'Protein';
     }
     // Sebze
-    else if (name.contains('domates') || name.contains('salatalık') || name.contains('marul') ||
-             name.contains('biber') || name.contains('soğan') || name.contains('patates') ||
-             name.contains('havuç') || name.contains('brokoli') || name.contains('sebze')) {
+    else if (name.contains('domates') ||
+        name.contains('salatalık') ||
+        name.contains('marul') ||
+        name.contains('biber') ||
+        name.contains('soğan') ||
+        name.contains('patates') ||
+        name.contains('havuç') ||
+        name.contains('brokoli') ||
+        name.contains('sebze')) {
       return 'Sebze';
     }
     // Meyve
-    else if (name.contains('elma') || name.contains('muz') || name.contains('portakal') ||
-             name.contains('çilek') || name.contains('meyve') || name.contains('üzüm')) {
+    else if (name.contains('elma') ||
+        name.contains('muz') ||
+        name.contains('portakal') ||
+        name.contains('çilek') ||
+        name.contains('meyve') ||
+        name.contains('üzüm')) {
       return 'Meyve';
     }
     // Tahıl
-    else if (name.contains('ekmek') || name.contains('makarna') || name.contains('pirinç') ||
-             name.contains('bulgur') || name.contains('yulaf') || name.contains('un')) {
+    else if (name.contains('ekmek') ||
+        name.contains('makarna') ||
+        name.contains('pirinç') ||
+        name.contains('bulgur') ||
+        name.contains('yulaf') ||
+        name.contains('un')) {
       return 'Tahıl';
     }
     // Yağ
-    else if (name.contains('yağ') || name.contains('zeytinyağı') || name.contains('tereyağı') ||
-             name.contains('fındık') || name.contains('ceviz') || name.contains('badem')) {
+    else if (name.contains('yağ') ||
+        name.contains('zeytinyağı') ||
+        name.contains('tereyağı') ||
+        name.contains('fındık') ||
+        name.contains('ceviz') ||
+        name.contains('badem')) {
       return 'Yağlar';
     }
     // Baharat
-    else if (name.contains('tuz') || name.contains('karabiber') || name.contains('baharat') ||
-             name.contains('kimyon') || name.contains('kekik')) {
+    else if (name.contains('tuz') ||
+        name.contains('karabiber') ||
+        name.contains('baharat') ||
+        name.contains('kimyon') ||
+        name.contains('kekik')) {
       return 'Baharat';
     }
     // Diğer
@@ -118,7 +146,7 @@ class _ShoppingListScreenState extends State<ShoppingListScreen> {
       return 'Diğer';
     }
   }
-  
+
   List<String> _getCategories() {
     final categories = <String>{'Tümü'};
     groceryItems.forEach((key, value) {
@@ -126,7 +154,7 @@ class _ShoppingListScreenState extends State<ShoppingListScreen> {
     });
     return categories.toList()..sort();
   }
-  
+
   List<String> _getFilteredItems() {
     if (selectedCategory == 'Tümü') {
       return groceryItems.keys.toList()..sort();
@@ -134,17 +162,18 @@ class _ShoppingListScreenState extends State<ShoppingListScreen> {
       return groceryItems.entries
           .where((entry) => entry.value['category'] == selectedCategory)
           .map((entry) => entry.key)
-          .toList()..sort();
+          .toList()
+        ..sort();
     }
   }
-  
+
   @override
   Widget build(BuildContext context) {
     final days = widget.mealPlan['days'] as List<dynamic>? ?? [];
     final categories = _getCategories();
     final filteredItems = _getFilteredItems();
     final checkedCount = checkedItems.values.where((v) => v).length;
-    
+
     return Scaffold(
       appBar: AppBar(
         title: Text('Alışveriş Listesi'),
@@ -176,7 +205,8 @@ class _ShoppingListScreenState extends State<ShoppingListScreen> {
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  Icon(Icons.shopping_cart_outlined, size: 64, color: Colors.grey),
+                  Icon(Icons.shopping_cart_outlined,
+                      size: 64, color: Colors.grey),
                   SizedBox(height: 16),
                   Text(
                     'Beslenme planı bulunamadı!',
@@ -214,7 +244,7 @@ class _ShoppingListScreenState extends State<ShoppingListScreen> {
                             final day = days[index] as Map<String, dynamic>;
                             final dayName = day['day'] ?? 'Gün ${index + 1}';
                             final isSelected = selectedDays.contains(index);
-                            
+
                             return Padding(
                               padding: EdgeInsets.only(right: 8),
                               child: FilterChip(
@@ -223,7 +253,8 @@ class _ShoppingListScreenState extends State<ShoppingListScreen> {
                                 selectedColor: Colors.white,
                                 checkmarkColor: Colors.purple,
                                 labelStyle: TextStyle(
-                                  color: isSelected ? Colors.purple : Colors.white,
+                                  color:
+                                      isSelected ? Colors.purple : Colors.white,
                                   fontWeight: FontWeight.bold,
                                 ),
                                 backgroundColor: Colors.purple.shade300,
@@ -246,7 +277,7 @@ class _ShoppingListScreenState extends State<ShoppingListScreen> {
                     ],
                   ),
                 ),
-                
+
                 // Kategori seçici
                 Container(
                   padding: EdgeInsets.all(16),
@@ -286,7 +317,7 @@ class _ShoppingListScreenState extends State<ShoppingListScreen> {
                     ),
                   ),
                 ),
-                
+
                 // Liste boş kontrolü
                 if (selectedDays.isEmpty)
                   Expanded(
@@ -294,7 +325,8 @@ class _ShoppingListScreenState extends State<ShoppingListScreen> {
                       child: Column(
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
-                          Icon(Icons.calendar_today, size: 48, color: Colors.grey),
+                          Icon(Icons.calendar_today,
+                              size: 48, color: Colors.grey),
                           SizedBox(height: 16),
                           Text(
                             'Lütfen en az bir gün seçin',
@@ -330,15 +362,17 @@ class _ShoppingListScreenState extends State<ShoppingListScreen> {
                         final itemName = filteredItems[index];
                         final item = groceryItems[itemName]!;
                         final isChecked = checkedItems[itemName] ?? false;
-                        
+
                         return Card(
                           elevation: isChecked ? 0 : 2,
-                          color: isChecked ? Colors.green.shade50 : Colors.white,
+                          color:
+                              isChecked ? Colors.green.shade50 : Colors.white,
                           margin: EdgeInsets.only(bottom: 8),
                           shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(12),
                             side: BorderSide(
-                              color: isChecked ? Colors.green : Colors.transparent,
+                              color:
+                                  isChecked ? Colors.green : Colors.transparent,
                               width: 2,
                             ),
                           ),
@@ -346,8 +380,8 @@ class _ShoppingListScreenState extends State<ShoppingListScreen> {
                             title: Text(
                               itemName,
                               style: TextStyle(
-                                decoration: isChecked 
-                                    ? TextDecoration.lineThrough 
+                                decoration: isChecked
+                                    ? TextDecoration.lineThrough
                                     : null,
                                 fontWeight: FontWeight.w500,
                                 color: isChecked ? Colors.grey : Colors.black87,
@@ -378,7 +412,8 @@ class _ShoppingListScreenState extends State<ShoppingListScreen> {
                                   '${item['amount']} ${item['unit']}',
                                   style: TextStyle(
                                     fontWeight: FontWeight.bold,
-                                    color: isChecked ? Colors.grey : Colors.purple,
+                                    color:
+                                        isChecked ? Colors.grey : Colors.purple,
                                   ),
                                 ),
                               ],
@@ -413,7 +448,7 @@ class _ShoppingListScreenState extends State<ShoppingListScreen> {
           : null,
     );
   }
-  
+
   Color _getCategoryColor(String category) {
     switch (category) {
       case 'Protein':
@@ -432,32 +467,34 @@ class _ShoppingListScreenState extends State<ShoppingListScreen> {
         return Colors.grey;
     }
   }
-  
+
   void _shareList() {
     final StringBuffer shareText = StringBuffer();
-    
+
     shareText.writeln('🛒 Alışveriş Listesi');
-    shareText.writeln('${DateTime.now().day}/${DateTime.now().month}/${DateTime.now().year}');
+    shareText.writeln(
+        '${DateTime.now().day}/${DateTime.now().month}/${DateTime.now().year}');
     shareText.writeln('');
-    
+
     final categories = _getCategories();
     for (var category in categories) {
       if (category == 'Tümü') continue;
-      
+
       final items = groceryItems.entries
           .where((e) => e.value['category'] == category)
           .toList();
-      
+
       if (items.isEmpty) continue;
-      
+
       shareText.writeln('📦 $category:');
       for (var item in items) {
         final check = checkedItems[item.key] ?? false ? '✅' : '⬜';
-        shareText.writeln('$check ${item.key} - ${item.value['amount']} ${item.value['unit']}');
+        shareText.writeln(
+            '$check ${item.key} - ${item.value['amount']} ${item.value['unit']}');
       }
       shareText.writeln('');
     }
-    
+
     // Share functionality buraya eklenebilir
     showDialog(
       context: context,

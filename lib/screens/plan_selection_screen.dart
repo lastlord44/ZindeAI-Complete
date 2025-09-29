@@ -92,7 +92,7 @@ class PlanSelectionScreen extends StatelessWidget {
                     context,
                     MaterialPageRoute(
                       builder: (_) =>
-                          WorkoutPlanDisplayScreen(profile: profile),
+                          WorkoutPlanDisplayScreen(workoutPlanData: {}),
                     ),
                   );
                 },
@@ -152,7 +152,7 @@ class PlanSelectionScreen extends StatelessWidget {
                       context,
                       MaterialPageRoute(
                         builder: (_) =>
-                            WorkoutPlanDisplayScreen(profile: profile),
+                            WorkoutPlanDisplayScreen(workoutPlanData: {}),
                       ),
                     );
                   }
