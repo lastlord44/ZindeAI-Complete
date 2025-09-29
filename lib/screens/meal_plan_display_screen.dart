@@ -4,6 +4,8 @@ import '../models/user_profile.dart';
 import '../services/api_service.dart';
 import '../widgets/loading_widget.dart';
 import '../widgets/error_widget.dart' as app;
+import 'meal_tracker_screen.dart';
+import 'shopping_list_screen.dart';
 
 class MealPlanDisplayScreen extends StatefulWidget {
   final UserProfile profile;
@@ -124,6 +126,27 @@ class _MealPlanDisplayScreenState extends State<MealPlanDisplayScreen> {
     return 'balanced';
   }
 
+  void _showWeeklyReport() {
+    // Haftalık rapor göster
+    showDialog(
+      context: context,
+      builder: (_) => AlertDialog(
+        title: Text('📊 Haftalık Rapor'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text('Bu hafta toplam ${_mealPlan?.dailyPlan.length ?? 0} gün planınız var.'),
+            SizedBox(height: 16),
+            ElevatedButton(
+              onPressed: () => Navigator.pop(context),
+              child: Text('Tamam'),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -131,6 +154,37 @@ class _MealPlanDisplayScreenState extends State<MealPlanDisplayScreen> {
         title: const Text('Beslenme Planınız'),
         backgroundColor: Colors.green,
         foregroundColor: Colors.white,
+        actions: [
+          IconButton(
+            icon: Icon(Icons.checklist),
+            tooltip: 'Öğün Takibi',
+            onPressed: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (_) => MealTrackerScreen(mealPlan: _mealPlan!.toJson()),
+                ),
+              );
+            },
+          ),
+          IconButton(
+            icon: Icon(Icons.shopping_cart),
+            tooltip: 'Alışveriş Listesi',
+            onPressed: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (_) => ShoppingListScreen(mealPlan: _mealPlan!.toJson()),
+                ),
+              );
+            },
+          ),
+          IconButton(
+            icon: Icon(Icons.analytics),
+            tooltip: 'Haftalık Rapor',
+            onPressed: _showWeeklyReport,
+          ),
+        ],
       ),
       body: _isLoading
           ? const LoadingWidget()

@@ -68,7 +68,10 @@ async function generateMealPlan(params: any) {
     diet = 'balanced',
     calories = 2000,
     daysPerWeek = 7,
-    activity = 'moderately_active'
+    activity = 'moderately_active',
+    wantMuscleGain = false,
+    proteinTarget = '112',
+    proteinPreference = 'moderate'
   } = params
 
   const actualAge = parseInt(age.toString())
@@ -90,34 +93,38 @@ async function generateMealPlan(params: any) {
   console.log('Calories:', calories)
   console.log('Days:', actualDays)
   console.log('Activity:', actualActivity)
+  console.log('Want Muscle Gain:', wantMuscleGain)
+  console.log('Protein Target:', proteinTarget)
+  console.log('Protein Preference:', proteinPreference)
 
   const prompt = `Sen dünyanın en iyi diyetisyenisin! Profesyonel bir beslenme uzmanı olarak ${actualAge} yaşında, ${actualWeight}kg, ${actualHeight}cm boyunda ${actualSex} için ${actualDays} günlük detaylı beslenme planı oluştur.
       
-      KULLANICI PROFİLİ:
-      - Yaş: ${actualAge}
-      - Cinsiyet: ${actualSex}
+      KİŞİ BİLGİLERİ:
       - Kilo: ${actualWeight} kg
       - Boy: ${actualHeight} cm
+      - Yaş: ${actualAge}
+      - Cinsiyet: ${actualSex}
       - Hedef: ${actualGoal}
-      - Aktivite Seviyesi: ${actualActivity}
-      - Diyet Tercihi: ${actualDiet}
-      - Günlük Kalori: ${calories || 2000}
+      - Kas Kütlesi Hedefi: ${wantMuscleGain ? 'EVET - KAS KAZANIMI/KORUMA ÖNCELİKLİ' : 'Hayır'}
       
-      ÖNEMLİ KURALLAR:
-      1. Her gün 5 öğün olacak: 1 kahvaltı + 2 ana öğün + 2 ara öğün
-      2. Günlük protein miktarı 120-150g arasında olsun
-      3. Her öğünde yüksek protein içeriği bulunsun
-      4. Profil bilgilerine göre kişiselleştirilmiş yemekler seç
-      5. Sağlıklı ve dengeli beslenme prensiplerini uygula
-      6. TAMAMEN FARKLI yemek isimleri kullan - hiçbir örnek yemek ismi kullanma
-      7. Farklı protein kaynakları kullan (tavuk, balık, et, yumurta, baklagil vb.)
-      8. Farklı sebze, meyve ve tahıl kombinasyonları oluştur
-      9. TÜRK MUTFAĞI yemekleri tercih et
-      10. Her yemek için DETAYLI TARİF yaz: malzemeler, gramajlar, pişirme yöntemi, süre
-      11. MUTLAKA her malzeme için gramaj belirt: "200g tavuk göğsü", "150g mercimek", "2 yemek kaşığı zeytinyağı"
-      12. Pişirme sürelerini dakika olarak belirt: "15 dakika haşla", "20 dakika kavur"
-      13. Porsiyon miktarlarını net belirt: "1 porsiyon için 300g", "2 kişilik"
-      14. Malzeme listesinde her şeyin miktarını yaz: "1 orta boy soğan (100g)", "2 diş sarımsak (10g)"
+      MAKRO HEDEFLER:
+      - Günlük Protein: MİNİMUM ${proteinTarget} gram (${wantMuscleGain ? 'HER ÖĞÜNDE PROTEIN ZORUNLU' : 'dengeli dağıtım'})
+      - Protein Kaynakları: Tavuk, balık, yumurta, süt ürünleri, baklagiller
+      - Kalori: ${calories || 2000} kcal
+      
+      ${wantMuscleGain ? `
+      ÖNEMLİ: Kas gelişimi için:
+      - Sabah yüksek proteinli kahvaltı
+      - Antrenman sonrası 30g+ protein
+      - Yatmadan önce kazein/yoğurt
+      - Her öğünde en az 25-30g protein
+      ` : ''}
+      
+      HER GÜN İÇİN ZORUNLU:
+      1. Tam makro değerleri (protein/karb/yağ gram olarak)
+      2. Detaylı malzeme listesi (gramajlarıyla)
+      3. Hazırlanış tarifi
+      4. Öğün zamanlaması önerileri
       
       JSON formatında yanıt ver:
       {
@@ -317,14 +324,35 @@ async function generateWorkoutPlan(params: any) {
       - Haftalık Antrenman: ${actualDays} gün
       - Antrenman Yeri: ${actualMode}
       
-      ÖNEMLİ KURALLAR:
-      1. Kullanıcının hedefine, fitness seviyesine ve antrenman yerine göre kişiselleştir
-      2. Gerçek egzersiz isimleri kullan
-      3. Her gün farklı kas gruplarına odaklan
-      4. Set, tekrar ve dinlenme sürelerini fitness seviyesine göre ayarla
-      5. Farklı egzersiz isimleri kullan - hiçbir örnek egzersiz ismi kullanma
-      6. Detaylı set/tekrar bilgileri ver
-      7. Antrenman yerine göre uygun egzersizler seç (${actualMode})
+      ZORUNLU DETAYLAR (HER HAREKET İÇİN):
+      1. Set x Tekrar sayısı
+      2. Dinlenme süresi (saniye olarak)
+      3. Tempo (örn: 2-0-2-0 = 2sn iniş, 0 duraklama, 2sn kalkış, 0 üstte duraklama)
+      4. RPE değeri (1-10 zorlanma skalası)
+      5. Form ipuçları (en az 2 madde)
+      6. Dikkat edilecek noktalar
+      7. Yaygın hatalar
+      8. Alternatif hareketler
+      
+      ÖRNEK FORMAT:
+      {
+        "exercise": "Barbell Bench Press",
+        "sets": 4,
+        "reps": "8-10",
+        "rest": "90-120 saniye",
+        "tempo": "2-0-1-0",
+        "rpe": 7,
+        "formTips": [
+          "Omuz küreklerini birbirine yaklaştır ve göğsünü dışarı çıkar",
+          "Ayakları yere sağlam bas, kalça kasını sık"
+        ],
+        "commonMistakes": [
+          "Dirseği çok açmak (45 derece açı ideal)",
+          "Barı göğse değdirmeden kaldırmak"
+        ],
+        "alternatives": ["Dumbbell Press", "İncline Press"],
+        "targetMuscles": ["Göğüs", "Ön omuz", "Triceps"]
+      }
       
       JSON formatında yanıt ver:
       {
@@ -350,6 +378,12 @@ async function generateWorkoutPlan(params: any) {
                 "sets": "number",
                 "reps": "string",
                 "rest": "string",
+                "tempo": "string",
+                "rpe": "number",
+                "formTips": ["string array"],
+                "commonMistakes": ["string array"],
+                "alternatives": ["string array"],
+                "targetMuscles": ["string array"],
                 "notes": "string"
               }
             ]

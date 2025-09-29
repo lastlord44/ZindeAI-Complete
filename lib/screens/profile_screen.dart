@@ -24,6 +24,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
   // Hedefler
   String _primaryGoal = 'maintain';
   bool _buildMuscle = false;
+  String? selectedGoal;
+  bool wantMuscleGain = false;
 
   // Aktivite seviyesi - Profesyonel TDEE çarpanları
   String _activityLevel = 'moderately_active';
@@ -112,6 +114,13 @@ class _ProfileScreenState extends State<ProfileScreen> {
       ),
     );
 
+    // Profile data'ya ekle
+    Map<String, dynamic> profileData = {
+      'goal': selectedGoal,
+      'wantMuscleGain': wantMuscleGain,
+      'proteinPreference': wantMuscleGain ? 'high' : 'moderate',
+    };
+
     // Profili kaydet
     final prefs = await SharedPreferences.getInstance();
     await prefs.setString('user_profile', json.encode(profile.toJson()));
@@ -198,88 +207,26 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
                       const SizedBox(height: 16),
 
-                      // Yaş, Boy, Kilo
-                      Row(
-                        children: [
-                          Expanded(
-                            child: TextFormField(
-                              controller: _ageController,
-                              keyboardType: TextInputType.number,
-                              decoration: const InputDecoration(
-                                labelText: 'Yaş', // labelText'e geri dönüyoruz
-                                floatingLabelBehavior: FloatingLabelBehavior
-                                    .always, // BU SATIR HATAYI ÇÖZER
-                                suffixText: 'yaş',
-                                border: OutlineInputBorder(),
-                                prefixIcon: Icon(Icons.cake),
-                              ),
-                              validator: (value) {
-                                if (value == null || value.isEmpty) {
-                                  return 'Gerekli';
-                                }
-                                final age = int.tryParse(value);
-                                if (age == null || age < 13 || age > 100) {
-                                  return '13-100 arası';
-                                }
-                                return null;
-                              },
-                            ),
-                          ),
-                          const SizedBox(width: 8),
-                          Expanded(
-                            child: TextFormField(
-                              controller: _heightController,
-                              keyboardType: TextInputType.number,
-                              decoration: const InputDecoration(
-                                labelText: 'Boy',
-                                floatingLabelBehavior: FloatingLabelBehavior
-                                    .always, // BU SATIR HATAYI ÇÖZER
-                                suffixText: 'cm',
-                                border: OutlineInputBorder(),
-                                prefixIcon: Icon(Icons.height),
-                              ),
-                              validator: (value) {
-                                if (value == null || value.isEmpty) {
-                                  return 'Gerekli';
-                                }
-                                final height = int.tryParse(value);
-                                if (height == null ||
-                                    height < 100 ||
-                                    height > 250) {
-                                  return '100-250 cm';
-                                }
-                                return null;
-                              },
-                            ),
-                          ),
-                          const SizedBox(width: 8),
-                          Expanded(
-                            child: TextFormField(
-                              controller: _weightController,
-                              keyboardType: TextInputType.number,
-                              decoration: const InputDecoration(
-                                labelText: 'Kilo',
-                                floatingLabelBehavior: FloatingLabelBehavior
-                                    .always, // BU SATIR HATAYI ÇÖZER
-                                suffixText: 'kg',
-                                border: OutlineInputBorder(),
-                                prefixIcon: Icon(Icons.monitor_weight),
-                              ),
-                              validator: (value) {
-                                if (value == null || value.isEmpty) {
-                                  return 'Gerekli';
-                                }
-                                final weight = double.tryParse(value);
-                                if (weight == null ||
-                                    weight < 30 ||
-                                    weight > 300) {
-                                  return '30-300 kg';
-                                }
-                                return null;
-                              },
-                            ),
-                          ),
-                        ],
+                      // Yaş, Boy, Kilo - Responsive
+                      _buildResponsiveTextField(
+                        label: 'Yaşınız',
+                        controller: _ageController,
+                        keyboardType: TextInputType.number,
+                        maxLength: 3,
+                      ),
+                      _buildResponsiveTextField(
+                        label: 'Boyunuz',
+                        controller: _heightController,
+                        keyboardType: TextInputType.number,
+                        suffix: 'cm',
+                        maxLength: 3,
+                      ),
+                      _buildResponsiveTextField(
+                        label: 'Kilonuz',
+                        controller: _weightController,
+                        keyboardType: TextInputType.numberWithOptions(decimal: true),
+                        suffix: 'kg',
+                        maxLength: 5,  // 3 + nokta + 1 ondalık
                       ),
                     ],
                   ),
@@ -295,53 +242,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   padding: const EdgeInsets.all(16),
                   child: Column(
                     children: [
-                      // Ana hedef
-                      const Text('Ana Hedefiniz Nedir?'),
-                      const SizedBox(height: 12),
-                      SegmentedButton<String>(
-                        segments: const [
-                          ButtonSegment(
-                            value: 'cut',
-                            label: Text('Kilo Ver'),
-                            icon: Icon(Icons.trending_down),
-                          ),
-                          ButtonSegment(
-                            value: 'maintain',
-                            label: Text('Koru'),
-                            icon: Icon(Icons.horizontal_rule),
-                          ),
-                          ButtonSegment(
-                            value: 'bulk',
-                            label: Text('Kilo Al'),
-                            icon: Icon(Icons.trending_up),
-                          ),
-                        ],
-                        selected: {_primaryGoal},
-                        onSelectionChanged: (selected) {
-                          setState(() => _primaryGoal = selected.first);
-                        },
-                      ),
-
-                      const SizedBox(height: 16),
-
-                      // Kas yapma hedefi
-                      CheckboxListTile(
-                        title: const Text(
-                            'Kas kütlesi kazanmak/korumak istiyorum'),
-                        subtitle: Text(
-                          _primaryGoal == 'cut'
-                              ? 'Kilo verirken kas korunur'
-                              : _primaryGoal == 'bulk'
-                                  ? 'Kilo alırken kas yapılır'
-                                  : 'Mevcut kiloyu korurken güç kazanılır',
-                          style: const TextStyle(fontSize: 12),
-                        ),
-                        value: _buildMuscle,
-                        onChanged: (value) {
-                          setState(() => _buildMuscle = value ?? false);
-                        },
-                        activeColor: Theme.of(context).primaryColor,
-                      ),
+                      // Hedef seçimi
+                      _buildGoalSelection(),
                     ],
                   ),
                 ),
@@ -593,6 +495,64 @@ class _ProfileScreenState extends State<ProfileScreen> {
     );
   }
 
+  // Responsive TextField widget'ı
+  Widget _buildResponsiveTextField({
+    required String label,
+    required TextEditingController controller,
+    required TextInputType keyboardType,
+    String? suffix,
+    int? maxLength,
+  }) {
+    return Container(
+      margin: EdgeInsets.symmetric(vertical: 8),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            label,
+            style: TextStyle(
+              fontSize: 14,
+              fontWeight: FontWeight.w600,
+              color: Colors.grey[700],
+            ),
+          ),
+          SizedBox(height: 4),
+          Container(
+            decoration: BoxDecoration(
+              border: Border.all(color: Colors.grey[300]!),
+              borderRadius: BorderRadius.circular(8),
+              color: Colors.white,
+            ),
+            child: TextField(
+              controller: controller,
+              keyboardType: keyboardType,
+              maxLength: maxLength,
+              style: TextStyle(
+                fontSize: 18,  // Büyük font
+                fontWeight: FontWeight.w500,
+              ),
+              decoration: InputDecoration(
+                contentPadding: EdgeInsets.symmetric(
+                  horizontal: 16,
+                  vertical: 16,  // Daha fazla padding
+                ),
+                suffixText: suffix,
+                suffixStyle: TextStyle(
+                  fontSize: 16,
+                  color: Colors.grey[600],
+                ),
+                border: InputBorder.none,
+                counterText: '',  // Karakter sayacını gizle
+                // Input alanını genişlet
+                isDense: false,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   List<DropdownMenuItem<String>> _getSplitOptions() {
     return [
       const DropdownMenuItem(
@@ -619,6 +579,40 @@ class _ProfileScreenState extends State<ProfileScreen> {
   void _updateSplitPreference() {
     // Gemini otomatik seçsin
     _splitPreference = 'AUTO';
+  }
+
+  // Hedef seçimi widget'ı
+  Widget _buildGoalSelection() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text('Hedefiniz:', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+        RadioListTile(
+          title: Text('Kilo Almak'),
+          value: 'bulk',
+          groupValue: selectedGoal,
+          onChanged: (value) => setState(() => selectedGoal = value),
+        ),
+        RadioListTile(
+          title: Text('Kilo Vermek'),
+          value: 'cut',
+          groupValue: selectedGoal,
+          onChanged: (value) => setState(() => selectedGoal = value),
+        ),
+        RadioListTile(
+          title: Text('Kilo Korumak'),
+          value: 'maintain',
+          groupValue: selectedGoal,
+          onChanged: (value) => setState(() => selectedGoal = value),
+        ),
+        CheckboxListTile(
+          title: Text('Kas kütlesi kazanmak/korumak istiyorum'),
+          value: wantMuscleGain,
+          onChanged: (value) => setState(() => wantMuscleGain = value!),
+          activeColor: Theme.of(context).primaryColor,
+        ),
+      ],
+    );
   }
 
   @override

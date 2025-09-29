@@ -147,6 +147,12 @@ class SmartApiHandler {
           tag: 'SmartApiHandler', data: {'error': e.toString()});
     }
 
+    // Kas kütlesi hedefi kontrolü
+    final wantMuscle = preferences?['wantMuscleGain'] ?? false;
+    final proteinTarget = wantMuscle 
+      ? ((weight ?? 70.0) * 2.2).toStringAsFixed(0)  // Kas için 2.2g/kg
+      : ((weight ?? 70.0) * 1.6).toStringAsFixed(0);  // Normal için 1.6g/kg
+
     final requestData = {
       'planType': 'meal', // Backend için planType ekle
       'calories': calories,
@@ -160,6 +166,10 @@ class SmartApiHandler {
       'weight': weight ?? 70.0,
       'height': height ?? 175.0,
       'activity': activity ?? 'orta',
+      // Kas kütlesi hedefi
+      'wantMuscleGain': wantMuscle,
+      'proteinTarget': proteinTarget,
+      'proteinPreference': wantMuscle ? 'high' : 'moderate',
     };
 
     try {
