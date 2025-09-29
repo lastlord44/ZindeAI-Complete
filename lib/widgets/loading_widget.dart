@@ -13,7 +13,7 @@ class LoadingWidget extends StatelessWidget {
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
           Shimmer.fromColors(
-            baseColor: Theme.of(context).primaryColor.withOpacity(0.3),
+            baseColor: Theme.of(context).primaryColor.withValues(alpha: 0.3),
             highlightColor: Theme.of(context).primaryColor,
             child: Container(
               width: 60,

@@ -1,7 +1,7 @@
 ZindeAI Router Worker — Detaylı Manifest ve Proje Şablonu (GitHub İçin)
 1. Proje Hedefi ve Özet
 Kapsam:
-Groq → Gemini Flash → HuggingFace → Degrade fallback zincirli, Cloudflare Worker ile Türk pazarı için AI temelli fitness/diyet backend.
+Gemini Flash AI ile Türk pazarı için AI temelli fitness/diyet backend.
 Felsefe:
 $500 bütçe, free modeller, en hızlı MVP için “para bitene kadar ilerle” mantığı.
 Platformlar:
@@ -33,7 +33,7 @@ zindeai-router-worker/
    └─ flutter_integration.dart # Flutter entegrasyon örneği[1]
 3. Teknik Özellikler & Strateji
 🔄 Akıllı Fallback Chain
-Groq Llama 3.1 8B (hız + yüksek kota, ilk deneme)
+Gemini 1.5 Flash (hız + yüksek kota, ilk deneme)
 
 Gemini 2.5 Flash (free tier)
 
@@ -99,7 +99,7 @@ npm install -g wrangler
 Secret’ları gir:
 
 text
-wrangler secret put GROQ_API_KEY
+wrangler secret put GEMINI_API_KEY
 wrangler secret put GEMINI_API_KEY
 wrangler secret put HF_TOKEN
 KV namespace oluştur ve wrangler.toml’a ID’leri ekle
@@ -113,9 +113,9 @@ wrangler deploy        # Production’a gönder
 Ortam değişkenleri (örnek wrangler.toml)
 text
 [vars]
-ROUTER_ORDER_TEXT = "groq,gemini_flash,hf"
+ROUTER_ORDER_TEXT = "gemini_flash"
 SAFETY_PCT = "0.10"
-GROQ_RPD = "1000000"
+GEMINI_RPD = "1000000"
 HF_RPD = "1000"
 GCS_BUCKET_URL = "https://storage.googleapis.com/zindeai-gifler"
 8. Katkı ve Lisans

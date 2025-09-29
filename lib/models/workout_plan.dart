@@ -22,13 +22,41 @@ class WorkoutPlan {
   });
 
   factory WorkoutPlan.fromJson(Map<String, dynamic> json) {
+    // API'den gelen format: {"workouts": [{"day": 1, "type": "...", "exercises": [...]}]}
+    List<WorkoutDay> days = [];
+
+    if (json.containsKey('workouts') && json['workouts'] is List) {
+      // API'nin mevcut formatı: "workouts": [...]
+      days = (json['workouts'] as List<dynamic>)
+          .map((e) => WorkoutDay.fromJson(e as Map<String, dynamic>))
+          .toList();
+    } else if (json.containsKey('days') &&
+        json['days'] is Map<String, dynamic>) {
+      // Backend'den gelen format: {"days": {"Pazartesi": {...}, "Salı": {...}}}
+      final daysMap = json['days'] as Map<String, dynamic>;
+      days = daysMap.entries.map((entry) {
+        final dayData = entry.value as Map<String, dynamic>;
+        return WorkoutDay.fromJson({
+          'day': entry.key,
+          'focus': dayData['focus'] ?? 'Genel Antrenman',
+          'exercises': dayData['exercises'] ?? [],
+          'warmup': dayData['warmup'],
+          'cooldown': dayData['cooldown'],
+          'totalTime': dayData['totalTime'],
+        });
+      }).toList();
+    } else if (json.containsKey('days') && json['days'] is List) {
+      // Eski format: {"days": [{"day": "Pazartesi", ...}]}
+      days = safeParseList(json['days'], (day) => WorkoutDay.fromJson(day));
+    }
+
     return WorkoutPlan(
       userId: safeParseString(json['userId']),
       weekNumber: safeParseInt(json['weekNumber'], defaultValue: 1),
-      splitType: safeParseString(json['splitType'], defaultValue: 'Bilinmiyor'),
-      mode: safeParseString(json['mode']),
+      splitType: safeParseString(json['splitType'], defaultValue: 'Full Body'),
+      mode: safeParseString(json['mode'], defaultValue: 'gym'),
       goal: safeParseString(json['goal']),
-      days: safeParseList(json['days'], (day) => WorkoutDay.fromJson(day)),
+      days: days,
       progressionNotes: safeParseString(json['progressionNotes']),
       nextWeekAdjustment: json['nextWeekAdjustment']?.toString(),
     );
@@ -54,8 +82,10 @@ class WorkoutDay {
 
   factory WorkoutDay.fromJson(Map<String, dynamic> json) {
     return WorkoutDay(
-      day: safeParseString(json['day'], defaultValue: 'Antrenman Günü'),
-      focus: safeParseString(json['focus']),
+      day: json['day']?.toString() ?? 'Antrenman Günü',
+      focus: json['type'] as String? ??
+          json['focus'] as String? ??
+          'Genel Antrenman',
       exercises:
           safeParseList(json['exercises'], (ex) => Exercise.fromJson(ex)),
       warmup: json['warmup']?.toString(),

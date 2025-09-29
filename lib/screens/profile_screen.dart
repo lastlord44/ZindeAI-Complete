@@ -1,8 +1,9 @@
+// ignore_for_file: deprecated_member_use
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'dart:convert';
 import '../models/user_profile.dart';
-import 'weekly_plan_screen.dart';
+import 'plan_selection_screen.dart';
 
 class ProfileScreen extends StatefulWidget {
   const ProfileScreen({super.key});
@@ -31,7 +32,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
   int _daysPerWeek = 3;
   String _splitPreference = 'AUTO';
   String _mode = 'gym';
-  List<String> _selectedDays = ['Monday', 'Wednesday', 'Friday'];
+  final List<String> _selectedDays = ['Monday', 'Wednesday', 'Friday'];
 
   // Diyet tercihleri
   List<String> _dietFlags = [];
@@ -115,12 +116,12 @@ class _ProfileScreenState extends State<ProfileScreen> {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setString('user_profile', json.encode(profile.toJson()));
 
-    // Plan sayfasına git
+    // Plan seçim sayfasına git
     if (mounted) {
       Navigator.push(
         context,
         MaterialPageRoute(
-          builder: (_) => WeeklyPlanScreen(profile: profile),
+          builder: (_) => PlanSelectionScreen(profile: profile),
         ),
       );
     }
@@ -358,11 +359,12 @@ class _ProfileScreenState extends State<ProfileScreen> {
                       RadioListTile<String>(
                         title: const Text('Hareketsiz'),
                         subtitle: const Text('Masa başı iş, hiç egzersiz yok'),
-                        value:
-                            'sedentary', // Değerleri İngilizce ve standart yapıyoruz
+                        value: 'sedentary',
                         groupValue: _activityLevel,
                         onChanged: (value) {
-                          setState(() => _activityLevel = value!);
+                          if (mounted) {
+                            setState(() => _activityLevel = value!);
+                          }
                         },
                       ),
                       RadioListTile<String>(
@@ -371,7 +373,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
                         value: 'lightly_active',
                         groupValue: _activityLevel,
                         onChanged: (value) {
-                          setState(() => _activityLevel = value!);
+                          if (mounted) {
+                            setState(() => _activityLevel = value!);
+                          }
                         },
                       ),
                       RadioListTile<String>(
@@ -381,7 +385,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
                         value: 'moderately_active',
                         groupValue: _activityLevel,
                         onChanged: (value) {
-                          setState(() => _activityLevel = value!);
+                          if (mounted) {
+                            setState(() => _activityLevel = value!);
+                          }
                         },
                       ),
                       RadioListTile<String>(
@@ -390,7 +396,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
                         value: 'very_active',
                         groupValue: _activityLevel,
                         onChanged: (value) {
-                          setState(() => _activityLevel = value!);
+                          if (mounted) {
+                            setState(() => _activityLevel = value!);
+                          }
                         },
                       ),
                     ],
@@ -419,10 +427,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
                           ButtonSegment(
                             value: 'home',
                             label: Text('Ev'),
-                          ),
-                          ButtonSegment(
-                            value: 'hybrid',
-                            label: Text('Her İkisi'),
                           ),
                         ],
                         selected: {_mode},
@@ -454,18 +458,21 @@ class _ProfileScreenState extends State<ProfileScreen> {
                         ],
                       ),
 
-                      // Split tercihi
+                      // Split tercihi - Gemini otomatik seçsin
                       const Text('Antrenman programı tipi:'),
                       const SizedBox(height: 8),
-                      DropdownButtonFormField<String>(
-                        value: _splitPreference,
-                        decoration: const InputDecoration(
-                          border: OutlineInputBorder(),
+                      Container(
+                        width: double.infinity,
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 12, vertical: 16),
+                        decoration: BoxDecoration(
+                          border: Border.all(color: Colors.grey),
+                          borderRadius: BorderRadius.circular(4),
                         ),
-                        items: _getSplitOptions(),
-                        onChanged: (value) {
-                          setState(() => _splitPreference = value!);
-                        },
+                        child: const Text(
+                          'Yapay zeka size uygun programı belirleyecek',
+                          style: TextStyle(fontSize: 16),
+                        ),
                       ),
                     ],
                   ),
@@ -587,49 +594,12 @@ class _ProfileScreenState extends State<ProfileScreen> {
   }
 
   List<DropdownMenuItem<String>> _getSplitOptions() {
-    final options = <DropdownMenuItem<String>>[];
-
-    options.add(const DropdownMenuItem(
-      value: 'AUTO',
-      child: Text('Otomatik Seç (Önerilen)'),
-    ));
-
-    if (_daysPerWeek >= 2) {
-      options.add(const DropdownMenuItem(
-        value: 'full_body',
-        child: Text('Full Body - Tüm vücut'),
-      ));
-    }
-
-    if (_daysPerWeek >= 2) {
-      options.add(const DropdownMenuItem(
-        value: 'upper_lower',
-        child: Text('Upper/Lower - Üst/Alt'),
-      ));
-    }
-
-    if (_daysPerWeek >= 3) {
-      options.add(const DropdownMenuItem(
-        value: 'ppl',
-        child: Text('PPL - Push/Pull/Legs'),
-      ));
-    }
-
-    if (_daysPerWeek >= 4) {
-      options.add(const DropdownMenuItem(
-        value: 'arnold',
-        child: Text('Arnold Split'),
-      ));
-    }
-
-    if (_daysPerWeek >= 5) {
-      options.add(const DropdownMenuItem(
-        value: 'bro_split',
-        child: Text('Bro Split - 5 günlük'),
-      ));
-    }
-
-    return options;
+    return [
+      const DropdownMenuItem(
+        value: 'AUTO',
+        child: Text('Otomatik Seç (Önerilen)'),
+      ),
+    ];
   }
 
   // Eski aktivite seviyesi değerlerini yeni TDEE değerlerine çevir
@@ -647,14 +617,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
   }
 
   void _updateSplitPreference() {
-    // Gün sayısına göre uygun olmayan split'i değiştir
-    if (_daysPerWeek < 5 && _splitPreference == 'bro_split') {
-      _splitPreference = 'AUTO';
-    } else if (_daysPerWeek < 4 && _splitPreference == 'arnold') {
-      _splitPreference = 'AUTO';
-    } else if (_daysPerWeek < 3 && _splitPreference == 'ppl') {
-      _splitPreference = 'AUTO';
-    }
+    // Gemini otomatik seçsin
+    _splitPreference = 'AUTO';
   }
 
   @override

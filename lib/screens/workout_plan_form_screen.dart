@@ -73,7 +73,7 @@ class _WorkoutPlanFormScreenState extends State<WorkoutPlanFormScreen> {
                           const SizedBox(width: 16),
                           Expanded(
                             child: DropdownButtonFormField<String>(
-                              value: _gender,
+                              initialValue: _gender,
                               decoration: const InputDecoration(
                                 labelText: 'Cinsiyet',
                                 border: OutlineInputBorder(),
@@ -140,7 +140,7 @@ class _WorkoutPlanFormScreenState extends State<WorkoutPlanFormScreen> {
                       ),
                       const SizedBox(height: 16),
                       DropdownButtonFormField<String>(
-                        value: _fitnessLevel,
+                        initialValue: _fitnessLevel,
                         decoration: const InputDecoration(
                           labelText: 'Fitness Seviyesi',
                           border: OutlineInputBorder(),
@@ -158,7 +158,7 @@ class _WorkoutPlanFormScreenState extends State<WorkoutPlanFormScreen> {
                       ),
                       const SizedBox(height: 16),
                       DropdownButtonFormField<String>(
-                        value: _goal,
+                        initialValue: _goal,
                         decoration: const InputDecoration(
                           labelText: 'Hedef',
                           border: OutlineInputBorder(),
@@ -177,7 +177,7 @@ class _WorkoutPlanFormScreenState extends State<WorkoutPlanFormScreen> {
                       ),
                       const SizedBox(height: 16),
                       DropdownButtonFormField<String>(
-                        value: _mode,
+                        initialValue: _mode,
                         decoration: const InputDecoration(
                           labelText: 'Antrenman Yeri',
                           border: OutlineInputBorder(),
@@ -223,7 +223,7 @@ class _WorkoutPlanFormScreenState extends State<WorkoutPlanFormScreen> {
                       ),
                       const SizedBox(height: 16),
                       DropdownButtonFormField<String>(
-                        value: _preferredSplit,
+                        initialValue: _preferredSplit,
                         decoration: const InputDecoration(
                           labelText: 'Split Tercihi',
                           border: OutlineInputBorder(),

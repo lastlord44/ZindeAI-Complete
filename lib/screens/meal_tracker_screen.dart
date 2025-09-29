@@ -233,9 +233,9 @@ class _MealTrackerScreenState extends State<MealTrackerScreen> {
           style: TextStyle(
               fontSize: 18, fontWeight: FontWeight.bold, color: color),
         ),
-        Text(
+        const Text(
           'gr',
-          style: const TextStyle(fontSize: 12, color: Colors.grey),
+          style: TextStyle(fontSize: 12, color: Colors.grey),
         ),
         const SizedBox(height: 4),
         SizedBox(
@@ -272,7 +272,7 @@ class _MealTrackerScreenState extends State<MealTrackerScreen> {
               style: TextStyle(fontWeight: FontWeight.bold, color: color)),
         ],
       ),
-      backgroundColor: color.withOpacity(0.1),
+      backgroundColor: color.withValues(alpha: 0.1),
     );
   }
 

@@ -73,7 +73,7 @@ class _MealPlanScreenState extends State<MealPlanScreen> {
 
                       // Hedef
                       DropdownButtonFormField<String>(
-                        value: _goal,
+                        initialValue: _goal,
                         decoration: const InputDecoration(
                           labelText: 'Hedef',
                           border: OutlineInputBorder(),
@@ -101,7 +101,7 @@ class _MealPlanScreenState extends State<MealPlanScreen> {
 
                       // Diyet Tipi
                       DropdownButtonFormField<String>(
-                        value: _diet,
+                        initialValue: _diet,
                         decoration: const InputDecoration(
                           labelText: 'Diyet Tipi',
                           border: OutlineInputBorder(),

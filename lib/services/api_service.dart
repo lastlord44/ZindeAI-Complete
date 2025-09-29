@@ -1,14 +1,13 @@
 import 'package:dio/dio.dart';
-import 'package:flutter/foundation.dart';
 import '../models/meal_plan.dart';
 import '../models/workout_plan.dart';
 import '../models/health_status.dart';
 import '../models/exercise.dart';
+import '../utils/logger.dart';
 import 'smart_api_handler.dart';
 
 class ApiService {
-  static const String baseUrl =
-      'https://uhibpbwgvnvasxlvcohr.supabase.co/functions/v1';
+  static const String baseUrl = 'http://localhost:3002/api';
   final Dio _dio;
   final SmartApiHandler _smartHandler = SmartApiHandler();
 
@@ -20,14 +19,16 @@ class ApiService {
             receiveTimeout: const Duration(seconds: 30),
             headers: {
               'Content-Type': 'application/json',
-              // Bu iki satır Supabase için zorunludur
-              'Authorization':
-                  'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InVoaWJwYndndm52YXN4bHZjb2hyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTg1Mjg2MDMsImV4cCI6MjA3NDEwNDYwM30.kZLLAiRyWuFsr-Lb8qzR7KXoSoH_7AVtgEkK9sZEGj8',
-              'apikey':
-                  'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InVoaWJwYndndm52YXN4bHZjb2hyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTg1Mjg2MDMsImV4cCI6MjA3NDEwNDYwM30.kZLLAiRyWuFsr-Lb8qzR7KXoSoH_7AVtgEkK9sZEGj8',
+              // Supabase API için basit header'lar
             },
           ),
         ) {
+    Logger.info('ApiService başlatılıyor', tag: 'ApiService', data: {
+      'baseUrl': baseUrl,
+      'connectTimeout': '10s',
+      'receiveTimeout': '30s',
+    });
+
     _dio.interceptors.add(LogInterceptor(
       requestBody: true,
       responseBody: true,
@@ -36,6 +37,8 @@ class ApiService {
 
     // Smart handler'ı başlat
     _smartHandler.initialize();
+
+    Logger.success('ApiService başarıyla başlatıldı', tag: 'ApiService');
   }
 
   // 1. Yemek Planı Oluştur - Smart Handler kullan
@@ -45,21 +48,76 @@ class ApiService {
     String diet = 'balanced',
     int daysPerWeek = 7,
     Map<String, dynamic>? preferences,
+    // Profil bilgileri
+    int? age,
+    String? sex,
+    double? weight,
+    double? height,
+    String? activity,
   }) async {
+    Logger.performanceStart('createMealPlan');
+    Logger.info('Yemek planı oluşturma isteği alındı',
+        tag: 'ApiService',
+        data: {
+          'calories': calories,
+          'goal': goal,
+          'diet': diet,
+          'daysPerWeek': daysPerWeek,
+          'preferences': preferences,
+        });
+
     try {
-      debugPrint('🚀 Smart API Handler ile yemek planı oluşturuluyor...');
-      debugPrint('Calories: $calories, Goal: $goal, Diet: $diet');
+      Logger.debug('Smart API Handler ile yemek planı oluşturuluyor',
+          tag: 'ApiService');
 
       // Smart handler kullan
-      return await _smartHandler.createMealPlan(
+      final mealPlan = await _smartHandler.createMealPlan(
         calories: calories,
         goal: goal,
         diet: diet,
         daysPerWeek: daysPerWeek,
         preferences: preferences,
+        // Profil bilgileri
+        age: age,
+        sex: sex,
+        weight: weight,
+        height: height,
+        activity: activity,
       );
-    } catch (e) {
-      debugPrint('❌ Smart handler hatası: $e');
+
+      Logger.success('Yemek planı başarıyla oluşturuldu',
+          tag: 'ApiService',
+          data: {
+            'planTitle': mealPlan.planTitle,
+            'dailyPlanCount': mealPlan.dailyPlan.length,
+          });
+
+      Logger.performanceEnd('createMealPlan', data: {
+        'calories': calories,
+        'goal': goal,
+        'diet': diet,
+      });
+
+      return mealPlan;
+    } catch (e, stackTrace) {
+      Logger.error('Yemek planı oluşturma hatası',
+          tag: 'ApiService',
+          error: e,
+          stackTrace: stackTrace,
+          data: {
+            'calories': calories,
+            'goal': goal,
+            'diet': diet,
+            'daysPerWeek': daysPerWeek,
+          });
+
+      Logger.performanceEnd('createMealPlan', data: {
+        'error': e.toString(),
+        'calories': calories,
+        'goal': goal,
+        'diet': diet,
+      });
+
       throw 'Yemek planı oluşturulamadı: $e';
     }
   }
@@ -80,12 +138,31 @@ class ApiService {
     List<String>? injuries,
     int? timePerSession,
   }) async {
+    Logger.performanceStart('createWorkoutPlan');
+    Logger.info('Antrenman planı oluşturma isteği alındı',
+        tag: 'ApiService',
+        data: {
+          'userId': userId,
+          'age': age,
+          'gender': gender,
+          'weight': weight,
+          'height': height,
+          'fitnessLevel': fitnessLevel,
+          'goal': goal,
+          'mode': mode,
+          'daysPerWeek': daysPerWeek,
+          'preferredSplit': preferredSplit,
+          'equipment': equipment,
+          'injuries': injuries,
+          'timePerSession': timePerSession,
+        });
+
     try {
-      debugPrint('🚀 Smart API Handler ile antrenman planı oluşturuluyor...');
-      debugPrint('User: $userId, Age: $age, Goal: $goal, Days: $daysPerWeek');
+      Logger.debug('Smart API Handler ile antrenman planı oluşturuluyor',
+          tag: 'ApiService');
 
       // Smart handler kullan
-      return await _smartHandler.createWorkoutPlan(
+      final workoutPlan = await _smartHandler.createWorkoutPlan(
         userId: userId,
         age: age,
         gender: gender,
@@ -100,67 +177,225 @@ class ApiService {
         injuries: injuries,
         timePerSession: timePerSession,
       );
-    } catch (e) {
-      debugPrint('❌ Smart handler hatası: $e');
+
+      Logger.success('Antrenman planı başarıyla oluşturuldu',
+          tag: 'ApiService',
+          data: {
+            'userId': userId,
+            'weekNumber': workoutPlan.weekNumber,
+            'splitType': workoutPlan.splitType,
+            'mode': workoutPlan.mode,
+            'daysCount': workoutPlan.days.length,
+          });
+
+      Logger.performanceEnd('createWorkoutPlan', data: {
+        'userId': userId,
+        'goal': goal,
+        'mode': mode,
+        'daysPerWeek': daysPerWeek,
+      });
+
+      return workoutPlan;
+    } catch (e, stackTrace) {
+      Logger.error('Antrenman planı oluşturma hatası',
+          tag: 'ApiService',
+          error: e,
+          stackTrace: stackTrace,
+          data: {
+            'userId': userId,
+            'age': age,
+            'gender': gender,
+            'goal': goal,
+            'mode': mode,
+            'daysPerWeek': daysPerWeek,
+          });
+
+      Logger.performanceEnd('createWorkoutPlan', data: {
+        'error': e.toString(),
+        'userId': userId,
+        'goal': goal,
+        'mode': mode,
+        'daysPerWeek': daysPerWeek,
+      });
+
       throw 'Antrenman planı oluşturulamadı: $e';
     }
   }
 
   // 3. Sağlık Kontrolü
   Future<HealthStatus> checkHealth() async {
+    Logger.apiStart('GET', '/health');
+
     try {
       final response = await _dio.get('/health');
-      return HealthStatus.fromJson(response.data);
+
+      Logger.apiSuccess('GET', '/health',
+          statusCode: response.statusCode, responseData: response.data);
+
+      final healthStatus = HealthStatus.fromJson(response.data);
+
+      Logger.success('Sağlık kontrolü başarılı', tag: 'ApiService', data: {
+        'status': healthStatus.status,
+        'message': healthStatus.message,
+      });
+
+      return healthStatus;
     } on DioException catch (e) {
-      throw _handleError(e);
+      Logger.apiError('GET', '/health',
+          statusCode: e.response?.statusCode,
+          error: e.message,
+          responseData: e.response?.data);
+
+      final errorMessage = _handleError(e);
+      Logger.error('Sağlık kontrolü hatası', tag: 'ApiService', error: e);
+      throw errorMessage;
+    } catch (e, stackTrace) {
+      Logger.error('Sağlık kontrolü beklenmeyen hatası',
+          tag: 'ApiService', error: e, stackTrace: stackTrace);
+      throw 'Sağlık kontrolü yapılamadı: $e';
     }
   }
 
   // 4. GIF URL Al
   String getGifUrl(String exerciseId) {
-    return '$baseUrl/gif/$exerciseId';
+    final url = '$baseUrl/gif/$exerciseId';
+    Logger.debug('GIF URL oluşturuldu', tag: 'ApiService', data: {
+      'exerciseId': exerciseId,
+      'url': url,
+    });
+    return url;
   }
 
   // 5. Adaptive Media URL Al
   String getMediaUrl(String exerciseId, {String format = 'gif'}) {
-    return '$baseUrl/media/$exerciseId?format=$format';
+    final url = '$baseUrl/media/$exerciseId?format=$format';
+    Logger.debug('Media URL oluşturuldu', tag: 'ApiService', data: {
+      'exerciseId': exerciseId,
+      'format': format,
+      'url': url,
+    });
+    return url;
   }
 
   // 6. Egzersiz Metadata Al
   Future<ExerciseMetadata> getExerciseMetadata(String exerciseId) async {
+    Logger.apiStart('GET', '/exercise/$exerciseId/meta');
+
     try {
       final response = await _dio.get('/exercise/$exerciseId/meta');
-      return ExerciseMetadata.fromJson(response.data);
+
+      Logger.apiSuccess('GET', '/exercise/$exerciseId/meta',
+          statusCode: response.statusCode, responseData: response.data);
+
+      final metadata = ExerciseMetadata.fromJson(response.data);
+
+      Logger.success('Egzersiz metadata alındı', tag: 'ApiService', data: {
+        'exerciseId': exerciseId,
+        'metadata': metadata.toJson(),
+      });
+
+      return metadata;
     } on DioException catch (e) {
-      throw _handleError(e);
+      Logger.apiError('GET', '/exercise/$exerciseId/meta',
+          statusCode: e.response?.statusCode,
+          error: e.message,
+          responseData: e.response?.data);
+
+      final errorMessage = _handleError(e);
+      Logger.error('Egzersiz metadata alma hatası',
+          tag: 'ApiService', error: e);
+      throw errorMessage;
+    } catch (e, stackTrace) {
+      Logger.error('Egzersiz metadata beklenmeyen hatası',
+          tag: 'ApiService', error: e, stackTrace: stackTrace);
+      throw 'Egzersiz metadata alınamadı: $e';
     }
   }
 
   // 7. Batch Egzersiz Kontrolü
   Future<BatchCheckResult> checkExercises(List<String> exerciseIds) async {
+    Logger.apiStart('POST', '/exercises/check', requestData: {
+      'exerciseIds': exerciseIds,
+    });
+
     try {
       final response = await _dio.post('/exercises/check', data: {
         'exerciseIds': exerciseIds,
       });
-      return BatchCheckResult.fromJson(response.data);
+
+      Logger.apiSuccess('POST', '/exercises/check',
+          statusCode: response.statusCode, responseData: response.data);
+
+      final result = BatchCheckResult.fromJson(response.data);
+
+      Logger.success('Batch egzersiz kontrolü tamamlandı',
+          tag: 'ApiService',
+          data: {
+            'exerciseIdsCount': exerciseIds.length,
+            'exerciseIds': exerciseIds,
+            'result': result.toJson(),
+          });
+
+      return result;
     } on DioException catch (e) {
-      throw _handleError(e);
+      Logger.apiError('POST', '/exercises/check',
+          statusCode: e.response?.statusCode,
+          error: e.message,
+          responseData: e.response?.data);
+
+      final errorMessage = _handleError(e);
+      Logger.error('Batch egzersiz kontrolü hatası',
+          tag: 'ApiService', error: e);
+      throw errorMessage;
+    } catch (e, stackTrace) {
+      Logger.error('Batch egzersiz kontrolü beklenmeyen hatası',
+          tag: 'ApiService', error: e, stackTrace: stackTrace);
+      throw 'Batch egzersiz kontrolü yapılamadı: $e';
     }
   }
 
   String _handleError(DioException error) {
+    String errorMessage;
+
     if (error.type == DioExceptionType.connectionTimeout) {
-      return 'Bağlantı zaman aşımına uğradı';
+      errorMessage = 'Bağlantı zaman aşımına uğradı';
+      Logger.warning('API bağlantı zaman aşımı', tag: 'ApiService', data: {
+        'errorType': 'connectionTimeout',
+        'url': error.requestOptions.uri.toString(),
+      });
     } else if (error.type == DioExceptionType.receiveTimeout) {
-      return 'Yanıt zaman aşımına uğradı';
+      errorMessage = 'Yanıt zaman aşımına uğradı';
+      Logger.warning('API yanıt zaman aşımı', tag: 'ApiService', data: {
+        'errorType': 'receiveTimeout',
+        'url': error.requestOptions.uri.toString(),
+      });
     } else if (error.type == DioExceptionType.connectionError) {
-      return 'İnternet bağlantınızı kontrol edin';
+      errorMessage = 'İnternet bağlantınızı kontrol edin';
+      Logger.warning('API bağlantı hatası', tag: 'ApiService', data: {
+        'errorType': 'connectionError',
+        'url': error.requestOptions.uri.toString(),
+      });
     } else if (error.response != null) {
       final statusCode = error.response?.statusCode;
       final message =
           error.response?.data['message'] ?? error.response?.data['error'];
-      return '$statusCode: ${message ?? 'Bir hata oluştu'}';
+      errorMessage = '$statusCode: ${message ?? 'Bir hata oluştu'}';
+
+      Logger.error('API HTTP hatası', tag: 'ApiService', data: {
+        'statusCode': statusCode,
+        'url': error.requestOptions.uri.toString(),
+        'responseData': error.response?.data,
+        'message': message,
+      });
+    } else {
+      errorMessage = 'Beklenmeyen bir hata oluştu';
+      Logger.error('API beklenmeyen hatası', tag: 'ApiService', data: {
+        'errorType': error.type.toString(),
+        'url': error.requestOptions.uri.toString(),
+        'message': error.message,
+      });
     }
-    return 'Beklenmeyen bir hata oluştu';
+
+    return errorMessage;
   }
 }

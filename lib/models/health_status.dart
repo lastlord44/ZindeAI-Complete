@@ -15,6 +15,8 @@ class HealthStatus {
     required this.responseTimeMs,
   });
 
+  String get message => status;
+
   factory HealthStatus.fromJson(Map<String, dynamic> json) {
     final providersMap = <String, ProviderStatus>{};
     if (json['providers'] != null) {

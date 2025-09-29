@@ -11,37 +11,38 @@ dependencies:
     sdk: flutter
 
   # HTTP Client
-  dio: ^5.4.0
+  dio: ^5.7.0
+  http: ^1.1.0
   
-  # Supabase
-  supabase_flutter: ^2.0.0
+  # Supabase - Node.js API kullanıyoruz
+  # supabase_flutter: ^2.8.0
   
   # UI Components
-  cupertino_icons: ^1.0.6
+  cupertino_icons: ^1.0.8
   
   # State Management
-  provider: ^6.1.1
+  provider: ^6.1.2
   
   # JSON Serialization
-  json_annotation: ^4.8.1
+  json_annotation: ^4.9.0
   
   # Media Display
-  cached_network_image: ^3.3.1
-  video_player: ^2.8.2
+  cached_network_image: ^3.4.1
+  video_player: ^2.9.2
   
   # Utilities
-  fluttertoast: ^8.2.4
+  fluttertoast: ^9.0.0
   shimmer: ^3.0.0
-  url_launcher: ^6.2.2
-  shared_preferences: ^2.2.2
-  intl: ^0.18.1  # Tarih formatı için
+  url_launcher: ^6.3.1
+  shared_preferences: ^2.3.2
+  intl: ^0.20.2  # Tarih formatı için
 
 dev_dependencies:
   flutter_test:
     sdk: flutter
-  flutter_lints: ^3.0.0
-  json_serializable: ^6.7.1
-  build_runner: ^2.4.7
+  flutter_lints: ^6.0.0
+  json_serializable: ^6.8.0
+  build_runner: ^2.4.13
 
 flutter:
   uses-material-design: true

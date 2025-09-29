@@ -1,23 +1,31 @@
 import 'package:flutter/material.dart';
-import 'meal_plan_screen.dart';
+import 'package:http/http.dart' as http;
+import 'dart:convert';
 import 'workout_plan_screen.dart';
 import 'media_test_screen.dart';
 import 'health_check_screen.dart';
 import 'batch_test_screen.dart';
 import 'profile_screen.dart';
-import '../services/meal_plan_generator.dart';
+import 'log_viewer_screen.dart';
+// import '../services/meal_plan_generator.dart'; // Silindi - Supabase API kullanıyoruz
+import '../utils/logger.dart';
 
 class HomeScreen extends StatelessWidget {
   const HomeScreen({super.key});
 
   @override
   Widget build(BuildContext context) {
+    Logger.ui('HomeScreen build ediliyor', screen: 'HomeScreen');
+
     return Scaffold(
       appBar: AppBar(
         title: const Text('ZindeAI Test Merkezi'),
       ),
       floatingActionButton: FloatingActionButton.extended(
         onPressed: () {
+          Logger.userAction('Profil butonuna tıklandı', screen: 'HomeScreen');
+          Logger.screenTransition('HomeScreen', 'ProfileScreen');
+
           Navigator.push(
             context,
             MaterialPageRoute(
@@ -68,10 +76,10 @@ class HomeScreen extends StatelessWidget {
             // Test Butonları
             Expanded(
               child: GridView.count(
-                crossAxisCount: 2,
+                crossAxisCount: 3,
                 mainAxisSpacing: 16,
                 crossAxisSpacing: 16,
-                childAspectRatio: 1.2,
+                childAspectRatio: 1.0,
                 children: [
                   _TestCard(
                     title: 'Yemek Planı',
@@ -79,11 +87,60 @@ class HomeScreen extends StatelessWidget {
                     icon: Icons.restaurant_menu,
                     color: Colors.orange,
                     onTap: () async {
+                      Logger.userAction('Yemek Planı test butonuna tıklandı',
+                          screen: 'HomeScreen');
+
                       try {
-                        final mealPlan = await generateMealPlan(context);
-                        showMealPlanDetails(context, mealPlan);
-                      } catch (e) {
-                        print('Error: $e');
+                        Logger.info('Yemek planı oluşturma başlatılıyor',
+                            tag: 'HomeScreen');
+                        // Supabase API'ye istek gönder
+                        final response = await http.post(
+                          Uri.parse(
+                              'https://uhibpbwgvnvasxlvcohr.supabase.co/functions/v1/zindeai-router'),
+                          headers: {
+                            'Content-Type': 'application/json',
+                          },
+                          body: jsonEncode({
+                            'planType': 'meal',
+                            'goal': 'kilo almak',
+                            'age': 35,
+                            'sex': 'male',
+                            'weight_kg': 72,
+                            'height_cm': 178,
+                            'activity_level': 'sedentary',
+                            'diet': 'dengeli',
+                            'daysOfWeek': 7
+                          }),
+                        );
+
+                        if (response.statusCode == 200) {
+                          final data = jsonDecode(response.body);
+                          Logger.success(
+                              'Supabase API yemek planı başarıyla oluşturuldu',
+                              tag: 'HomeScreen',
+                              data: {
+                                'planType': data['planType'],
+                                'success': data['success'],
+                              });
+
+                          if (context.mounted) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(
+                                content:
+                                    Text('Supabase API yemek planı başarılı!'),
+                                backgroundColor: Colors.green,
+                              ),
+                            );
+                          }
+                        } else {
+                          throw Exception(
+                              'Supabase API hatası: ${response.statusCode}');
+                        }
+                      } catch (e, stackTrace) {
+                        Logger.error('Yemek planı oluşturma hatası',
+                            tag: 'HomeScreen',
+                            error: e,
+                            stackTrace: stackTrace);
                       }
                     },
                   ),
@@ -92,55 +149,103 @@ class HomeScreen extends StatelessWidget {
                     subtitle: 'POST /antrenman',
                     icon: Icons.sports_gymnastics,
                     color: Colors.blue,
-                    onTap: () => Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (_) => const WorkoutPlanScreen(),
-                      ),
-                    ),
+                    onTap: () {
+                      Logger.userAction('Antrenman test butonuna tıklandı',
+                          screen: 'HomeScreen');
+                      Logger.screenTransition(
+                          'HomeScreen', 'WorkoutPlanScreen');
+
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (_) => const WorkoutPlanScreen(),
+                        ),
+                      );
+                    },
                   ),
                   _TestCard(
                     title: 'Media Test',
                     subtitle: 'GIF/MP4/WebP',
                     icon: Icons.image,
                     color: Colors.purple,
-                    onTap: () => Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (_) => const MediaTestScreen(),
-                      ),
-                    ),
+                    onTap: () {
+                      Logger.userAction('Media Test butonuna tıklandı',
+                          screen: 'HomeScreen');
+                      Logger.screenTransition('HomeScreen', 'MediaTestScreen');
+
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (_) => const MediaTestScreen(),
+                        ),
+                      );
+                    },
                   ),
                   _TestCard(
                     title: 'Sağlık Kontrolü',
                     subtitle: 'GET /health',
                     icon: Icons.monitor_heart,
                     color: Colors.red,
-                    onTap: () => Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (_) => const HealthCheckScreen(),
-                      ),
-                    ),
+                    onTap: () {
+                      Logger.userAction('Sağlık Kontrolü butonuna tıklandı',
+                          screen: 'HomeScreen');
+                      Logger.screenTransition(
+                          'HomeScreen', 'HealthCheckScreen');
+
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (_) => const HealthCheckScreen(),
+                        ),
+                      );
+                    },
                   ),
                   _TestCard(
                     title: 'Batch Test',
                     subtitle: 'POST /exercises/check',
                     icon: Icons.checklist,
                     color: Colors.teal,
-                    onTap: () => Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (_) => const BatchTestScreen(),
-                      ),
-                    ),
+                    onTap: () {
+                      Logger.userAction('Batch Test butonuna tıklandı',
+                          screen: 'HomeScreen');
+                      Logger.screenTransition('HomeScreen', 'BatchTestScreen');
+
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (_) => const BatchTestScreen(),
+                        ),
+                      );
+                    },
                   ),
                   _TestCard(
                     title: 'API Durumu',
                     subtitle: baseUrl,
                     icon: Icons.api,
                     color: Colors.green,
-                    onTap: () => _showApiInfo(context),
+                    onTap: () {
+                      Logger.userAction('API Durumu butonuna tıklandı',
+                          screen: 'HomeScreen');
+                      _showApiInfo(context);
+                    },
+                  ),
+                  _TestCard(
+                    title: 'Log Görüntüleyici',
+                    subtitle: 'Sistem logları',
+                    icon: Icons.article,
+                    color: Colors.indigo,
+                    onTap: () {
+                      Logger.userAction('Log Görüntüleyici butonuna tıklandı',
+                          screen: 'HomeScreen');
+                      Logger.screenTransition('HomeScreen', 'LogViewerScreen');
+
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (_) => const LogViewerScreen(),
+                        ),
+                      );
+                    },
                   ),
                 ],
               ),
@@ -152,14 +257,16 @@ class HomeScreen extends StatelessWidget {
   }
 
   void _showApiInfo(BuildContext context) {
+    Logger.userAction('API bilgileri dialog açıldı', screen: 'HomeScreen');
+
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
         title: const Text('API Bilgileri'),
-        content: Column(
+        content: const Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
-          children: const [
+          children: [
             Text('Base URL:'),
             SizedBox(height: 4),
             SelectableText(
@@ -172,7 +279,11 @@ class HomeScreen extends StatelessWidget {
         ),
         actions: [
           TextButton(
-            onPressed: () => Navigator.pop(context),
+            onPressed: () {
+              Logger.userAction('API bilgileri dialog kapatıldı',
+                  screen: 'HomeScreen');
+              Navigator.pop(context);
+            },
             child: const Text('Tamam'),
           ),
         ],

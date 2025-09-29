@@ -20,12 +20,26 @@ class MealPlan {
   int get totalFat => dailyPlan.fold(0, (sum, day) => sum + day.totalFatForDay);
 
   factory MealPlan.fromJson(Map<String, dynamic> json) {
+    // Backend'den gelen format: weeklyPlan, dailyPlan veya data.meals
+    List<dynamic> dailyPlanData;
+    if (json.containsKey('weeklyPlan')) {
+      dailyPlanData = json['weeklyPlan'] as List<dynamic>? ?? [];
+    } else if (json.containsKey('dailyPlan')) {
+      dailyPlanData = json['dailyPlan'] as List<dynamic>? ?? [];
+    } else if (json.containsKey('data') &&
+        json['data'] is Map &&
+        json['data'].containsKey('meals')) {
+      // API'nin mevcut formatı: data.meals
+      dailyPlanData = json['data']['meals'] as List<dynamic>? ?? [];
+    } else {
+      dailyPlanData = [];
+    }
+
     return MealPlan(
       planTitle: json['planTitle'] as String? ?? 'Beslenme Planı',
       summary: json['summary'] as String? ?? '',
-      dailyPlan: (json['dailyPlan'] as List<dynamic>? ?? [])
-          .map((dayJson) => DailyPlan.fromJson(dayJson))
-          .toList(),
+      dailyPlan:
+          dailyPlanData.map((dayJson) => DailyPlan.fromJson(dayJson)).toList(),
     );
   }
 }
@@ -54,11 +68,102 @@ class DailyPlan {
     // Artık json'ın Map olduğundan eminiz
     final Map<String, dynamic> map = json as Map<String, dynamic>;
 
+    // API'den gelen format: breakfast, snack1, lunch, snack2, dinner
+    List<Meal> mealsList = [];
+
+    // Breakfast
+    if (map['breakfast'] != null) {
+      mealsList.add(Meal.fromJson({
+        'name': map['breakfast']['name'] ?? 'Kahvaltı',
+        'items': [
+          {
+            'itemName': 'Kahvaltı',
+            'quantity': 1,
+            'unit': 'porsiyon',
+            'calories': map['breakfast']['calories'] ?? 0,
+            'protein': map['breakfast']['protein'] ?? 0,
+            'carbs': map['breakfast']['carbs'] ?? 0,
+            'fat': map['breakfast']['fat'] ?? 0,
+          }
+        ]
+      }));
+    }
+
+    // Snack1
+    if (map['snack1'] != null) {
+      mealsList.add(Meal.fromJson({
+        'name': map['snack1']['name'] ?? 'Sabah Ara Öğün',
+        'items': [
+          {
+            'itemName': 'Sabah Ara Öğün',
+            'quantity': 1,
+            'unit': 'porsiyon',
+            'calories': map['snack1']['calories'] ?? 0,
+            'protein': map['snack1']['protein'] ?? 0,
+            'carbs': map['snack1']['carbs'] ?? 0,
+            'fat': map['snack1']['fat'] ?? 0,
+          }
+        ]
+      }));
+    }
+
+    // Lunch
+    if (map['lunch'] != null) {
+      mealsList.add(Meal.fromJson({
+        'name': map['lunch']['name'] ?? 'Öğle Yemeği',
+        'items': [
+          {
+            'itemName': 'Öğle Yemeği',
+            'quantity': 1,
+            'unit': 'porsiyon',
+            'calories': map['lunch']['calories'] ?? 0,
+            'protein': map['lunch']['protein'] ?? 0,
+            'carbs': map['lunch']['carbs'] ?? 0,
+            'fat': map['lunch']['fat'] ?? 0,
+          }
+        ]
+      }));
+    }
+
+    // Snack2
+    if (map['snack2'] != null) {
+      mealsList.add(Meal.fromJson({
+        'name': map['snack2']['name'] ?? 'Akşam Ara Öğün',
+        'items': [
+          {
+            'itemName': 'Akşam Ara Öğün',
+            'quantity': 1,
+            'unit': 'porsiyon',
+            'calories': map['snack2']['calories'] ?? 0,
+            'protein': map['snack2']['protein'] ?? 0,
+            'carbs': map['snack2']['carbs'] ?? 0,
+            'fat': map['snack2']['fat'] ?? 0,
+          }
+        ]
+      }));
+    }
+
+    // Dinner
+    if (map['dinner'] != null) {
+      mealsList.add(Meal.fromJson({
+        'name': map['dinner']['name'] ?? 'Akşam Yemeği',
+        'items': [
+          {
+            'itemName': 'Akşam Yemeği',
+            'quantity': 1,
+            'unit': 'porsiyon',
+            'calories': map['dinner']['calories'] ?? 0,
+            'protein': map['dinner']['protein'] ?? 0,
+            'carbs': map['dinner']['carbs'] ?? 0,
+            'fat': map['dinner']['fat'] ?? 0,
+          }
+        ]
+      }));
+    }
+
     return DailyPlan(
-      day: map['day'] as String? ?? 'Bilinmeyen Gün',
-      meals: (map['meals'] as List<dynamic>? ?? [])
-          .map((mealJson) => Meal.fromJson(mealJson))
-          .toList(),
+      day: map['day']?.toString() ?? 'Bilinmeyen Gün',
+      meals: mealsList,
     );
   }
 }
@@ -83,7 +188,7 @@ class Meal {
     final Map<String, dynamic> map = json as Map<String, dynamic>;
 
     return Meal(
-      name: map['mealName'] as String? ?? 'Öğün',
+      name: map['mealName'] as String? ?? map['name'] as String? ?? 'Öğün',
       items: (map['items'] as List<dynamic>? ?? [])
           .map((itemJson) => Ingredient.fromJson(itemJson))
           .toList(),

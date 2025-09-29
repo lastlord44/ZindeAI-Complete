@@ -15,7 +15,7 @@ class _TestScreenState extends State<TestScreen> {
   final SmartApiHandler _apiHandler = SmartApiHandler();
   final ValidationService _validator = ValidationService();
 
-  List<TestResult> _testResults = [];
+  final List<TestResult> _testResults = [];
   bool _isRunning = false;
   String _currentTest = '';
 
@@ -151,9 +151,9 @@ class _TestScreenState extends State<TestScreen> {
                                     MainAxisAlignment.spaceBetween,
                                 children: [
                                   Text(
-                                      'Supabase Başarılı: ${stats['gemini_success']}'),
+                                      'Supabase API Başarılı: ${stats['gemini_success']}'),
                                   Text(
-                                      'Supabase Başarısız: ${stats['gemini_failed']}'),
+                                      'Supabase API Başarısız: ${stats['gemini_failed']}'),
                                 ],
                               ),
                             ],
@@ -523,19 +523,24 @@ class _TestScreenState extends State<TestScreen> {
       final smartHandler = SmartApiHandler();
       await smartHandler.testApiConnection();
 
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('API test tamamlandı, console loglarını kontrol edin'),
-          backgroundColor: Colors.blue,
-        ),
-      );
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content:
+                Text('API test tamamlandı, console loglarını kontrol edin'),
+            backgroundColor: Colors.blue,
+          ),
+        );
+      }
     } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('API test hatası: $e'),
-          backgroundColor: Colors.red,
-        ),
-      );
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('API test hatası: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
     }
   }
 }

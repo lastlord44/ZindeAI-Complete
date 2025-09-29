@@ -2,6 +2,7 @@
 
 import 'dart:convert';
 import 'package:flutter/material.dart';
+import '../utils/logger.dart';
 
 /// Kapsamlı validasyon ve bug önleme sistemi
 class ValidationService {
@@ -11,6 +12,13 @@ class ValidationService {
 
   /// Profil verilerini validate et ve temizle
   Map<String, dynamic> validateAndCleanProfileData(Map<String, dynamic> data) {
+    Logger.debug('Profil validasyonu başlatılıyor',
+        tag: 'ValidationService',
+        data: {
+          'inputKeys': data.keys.toList(),
+          'inputDataSize': data.toString().length,
+        });
+
     final cleaned = <String, dynamic>{};
 
     try {
@@ -51,13 +59,25 @@ class ValidationService {
       cleaned['equipment'] = _validateEquipment(data['equipment']);
       cleaned['injuries'] = _validateInjuries(data['injuries']);
 
-      debugPrint('✅ Profil validasyonu başarılı');
+      Logger.success('Profil validasyonu başarılı',
+          tag: 'ValidationService',
+          data: {
+            'cleanedKeys': cleaned.keys.toList(),
+            'cleanedDataSize': cleaned.toString().length,
+          });
       return cleaned;
     } catch (e, stackTrace) {
-      debugPrint('❌ Profil validasyon hatası: $e');
-      debugPrint('Stack trace: $stackTrace');
+      Logger.error('Profil validasyon hatası',
+          tag: 'ValidationService',
+          error: e,
+          stackTrace: stackTrace,
+          data: {
+            'inputData': data,
+          });
 
       // Hata durumunda varsayılan değerlerle dön
+      Logger.warning('Varsayılan profil kullanılıyor',
+          tag: 'ValidationService');
       return _getDefaultProfile();
     }
   }
@@ -65,6 +85,7 @@ class ValidationService {
   /// User ID validasyonu
   String _validateUserId(dynamic value) {
     if (value == null || value.toString().isEmpty) {
+      Logger.validation('userId', 'User ID boş olamaz');
       throw ValidationException('User ID boş olamaz');
     }
 
@@ -74,10 +95,23 @@ class ValidationService {
     final uuidRegex = RegExp(
         r'^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$');
 
-    if (!uuidRegex.hasMatch(userId) && !userId.startsWith('user_')) {
+    if (!uuidRegex.hasMatch(userId) &&
+        !userId.startsWith('user_') &&
+        !userId.startsWith('test_')) {
+      Logger.validation('userId', 'Geçersiz User ID formatı', data: {
+        'userId': userId,
+        'isUuid': uuidRegex.hasMatch(userId),
+        'startsWithUser': userId.startsWith('user_'),
+        'startsWithTest': userId.startsWith('test_'),
+      });
       throw ValidationException('Geçersiz User ID formatı');
     }
 
+    Logger.debug('User ID validasyonu başarılı',
+        tag: 'ValidationService',
+        data: {
+          'userId': userId,
+        });
     return userId;
   }
 
@@ -530,45 +564,239 @@ class ValidationService {
 
   /// Plan validasyonu
   bool validateMealPlan(Map<String, dynamic> plan) {
+    Logger.debug('Meal plan validasyonu başlatılıyor',
+        tag: 'ValidationService',
+        data: {
+          'planKeys': plan.keys.toList(),
+          'planSize': plan.toString().length,
+        });
+
     try {
-      // Zorunlu alanlar
-      if (!plan.containsKey('weeklyPlan')) return false;
+      // Zorunlu alanlar - weeklyPlan, dailyPlan veya data.meals formatlarını destekle
+      if (!plan.containsKey('weeklyPlan') &&
+          !plan.containsKey('dailyPlan') &&
+          !(plan.containsKey('data') &&
+              plan['data'] is Map &&
+              plan['data'].containsKey('meals'))) {
+        Logger.validation(
+            'mealPlan', 'weeklyPlan, dailyPlan veya data.meals key bulunamadı',
+            data: {
+              'availableKeys': plan.keys.toList(),
+            });
+        return false;
+      }
 
-      final weeklyPlan = plan['weeklyPlan'];
-      if (weeklyPlan is! List) return false;
+      // weeklyPlan array formatında mı yoksa object formatında mı kontrol et
+      dynamic weeklyPlan;
+      bool isArrayFormat = false;
 
-      // 7 gün kontrolü
-      if (weeklyPlan.length != 7) return false;
+      if (plan.containsKey('weeklyPlan')) {
+        weeklyPlan = plan['weeklyPlan'];
+        if (weeklyPlan is List) {
+          isArrayFormat = true;
+        } else if (weeklyPlan is! Map) {
+          Logger.validation('mealPlan', 'weeklyPlan ne Map ne de List', data: {
+            'type': weeklyPlan.runtimeType.toString(),
+            'value': weeklyPlan.toString(),
+          });
+          return false;
+        }
+      } else if (plan.containsKey('dailyPlan')) {
+        weeklyPlan = plan['dailyPlan'];
+        if (weeklyPlan is List) {
+          isArrayFormat = true;
+        } else if (weeklyPlan is! Map) {
+          Logger.validation('mealPlan', 'dailyPlan ne Map ne de List', data: {
+            'type': weeklyPlan.runtimeType.toString(),
+            'value': weeklyPlan.toString(),
+          });
+          return false;
+        }
+      } else if (plan.containsKey('data') &&
+          plan['data'] is Map &&
+          plan['data'].containsKey('meals')) {
+        // API'nin mevcut formatı: data.meals
+        weeklyPlan = plan['data']['meals'];
+        if (weeklyPlan is List) {
+          isArrayFormat = true;
+        } else if (weeklyPlan is! Map) {
+          Logger.validation('mealPlan', 'data.meals ne Map ne de List', data: {
+            'type': weeklyPlan.runtimeType.toString(),
+            'value': weeklyPlan.toString(),
+          });
+          return false;
+        }
+      }
 
-      // Her günü kontrol et
-      for (final dayPlan in weeklyPlan) {
-        if (dayPlan is! Map) return false;
+      if (isArrayFormat) {
+        // Array formatında (backend'den gelen format)
+        final weeklyPlanList = weeklyPlan as List;
+        if (weeklyPlanList.isEmpty) {
+          Logger.validation('mealPlan', 'weeklyPlan boş array', data: {});
+          return false;
+        }
 
-        // Gün adı kontrolü
-        if (!dayPlan.containsKey('day')) return false;
-
-        // Öğünleri kontrol et
-        if (!dayPlan.containsKey('meals')) return false;
-
-        final meals = dayPlan['meals'];
-        if (meals is! List) return false;
-
-        // Her öğünü kontrol et
-        for (final meal in meals) {
-          if (meal is! Map) return false;
-
-          // Öğün detaylarını kontrol et
-          if (!meal.containsKey('name') ||
-              !meal.containsKey('calories') ||
-              !meal.containsKey('items')) {
+        // Her günü kontrol et
+        for (int i = 0; i < weeklyPlanList.length; i++) {
+          final dayPlan = weeklyPlanList[i];
+          if (dayPlan is! Map) {
+            Logger.validation('mealPlan', 'Gün planı Map değil', data: {
+              'dayIndex': i,
+              'type': dayPlan.runtimeType.toString(),
+            });
             return false;
+          }
+
+          // Öğünleri kontrol et - API'den gelen format: breakfast, lunch, dinner
+          if (!dayPlan.containsKey('meals') &&
+              !dayPlan.containsKey('breakfast') &&
+              !dayPlan.containsKey('lunch') &&
+              !dayPlan.containsKey('dinner')) {
+            Logger.validation('mealPlan',
+                'Gün planında meals veya breakfast/lunch/dinner key yok',
+                data: {
+                  'dayIndex': i,
+                  'availableKeys': dayPlan.keys.toList(),
+                });
+            return false;
+          }
+
+          // API'den gelen format: breakfast, lunch, dinner
+          if (dayPlan.containsKey('breakfast') ||
+              dayPlan.containsKey('lunch') ||
+              dayPlan.containsKey('dinner')) {
+            // Yeni format - breakfast/lunch/dinner var, validation geçer
+            continue;
+          }
+
+          // Eski format - meals array
+          final meals = dayPlan['meals'];
+          if (meals is! List) {
+            Logger.validation('mealPlan', 'Meals List değil', data: {
+              'dayIndex': i,
+              'type': meals.runtimeType.toString(),
+            });
+            return false;
+          }
+
+          // Her öğünü kontrol et
+          for (int j = 0; j < meals.length; j++) {
+            final meal = meals[j];
+            if (meal is! Map) {
+              Logger.validation('mealPlan', 'Öğün Map değil', data: {
+                'dayIndex': i,
+                'mealIndex': j,
+                'type': meal.runtimeType.toString(),
+              });
+              return false;
+            }
+
+            // Öğün detaylarını kontrol et
+            if (!meal.containsKey('name') ||
+                !meal.containsKey('calories') ||
+                !meal.containsKey('items')) {
+              Logger.validation('mealPlan', 'Öğün detayları eksik', data: {
+                'dayIndex': i,
+                'mealIndex': j,
+                'availableKeys': meal.keys.toList(),
+              });
+              return false;
+            }
+          }
+        }
+      } else {
+        // Object formatında (eski format)
+        final weeklyPlanMap = weeklyPlan as Map<String, dynamic>;
+        final dayNames = [
+          'Pazartesi',
+          'Salı',
+          'Çarşamba',
+          'Perşembe',
+          'Cuma',
+          'Cumartesi',
+          'Pazar'
+        ];
+
+        for (final dayName in dayNames) {
+          if (!weeklyPlanMap.containsKey(dayName)) {
+            Logger.validation('mealPlan', 'Gün eksik', data: {
+              'missingDay': dayName,
+              'availableDays': weeklyPlanMap.keys.toList(),
+            });
+            return false;
+          }
+        }
+
+        // Her günü kontrol et
+        for (final dayName in dayNames) {
+          final dayPlan = weeklyPlanMap[dayName];
+          if (dayPlan is! Map) {
+            Logger.validation('mealPlan', 'Gün planı Map değil', data: {
+              'day': dayName,
+              'type': dayPlan.runtimeType.toString(),
+            });
+            return false;
+          }
+
+          // Öğünleri kontrol et
+          if (!dayPlan.containsKey('meals')) {
+            Logger.validation('mealPlan', 'Gün planında meals key yok', data: {
+              'day': dayName,
+              'availableKeys': dayPlan.keys.toList(),
+            });
+            return false;
+          }
+
+          final meals = dayPlan['meals'];
+          if (meals is! List) {
+            Logger.validation('mealPlan', 'Meals List değil', data: {
+              'day': dayName,
+              'type': meals.runtimeType.toString(),
+            });
+            return false;
+          }
+
+          // Her öğünü kontrol et
+          for (int i = 0; i < meals.length; i++) {
+            final meal = meals[i];
+            if (meal is! Map) {
+              Logger.validation('mealPlan', 'Öğün Map değil', data: {
+                'day': dayName,
+                'mealIndex': i,
+                'type': meal.runtimeType.toString(),
+              });
+              return false;
+            }
+
+            // Öğün detaylarını kontrol et
+            if (!meal.containsKey('name') ||
+                !meal.containsKey('calories') ||
+                !meal.containsKey('items')) {
+              Logger.validation('mealPlan', 'Öğün detayları eksik', data: {
+                'day': dayName,
+                'mealIndex': i,
+                'availableKeys': meal.keys.toList(),
+              });
+              return false;
+            }
           }
         }
       }
 
+      Logger.success('Meal plan validasyonu başarılı',
+          tag: 'ValidationService',
+          data: {
+            'format': isArrayFormat ? 'array' : 'object',
+            'daysCount': isArrayFormat ? (weeklyPlan as List).length : 7,
+          });
       return true;
     } catch (e) {
-      debugPrint('❌ Plan validasyon hatası: $e');
+      Logger.error('Meal plan validasyon hatası',
+          tag: 'ValidationService',
+          data: {
+            'error': e.toString(),
+            'plan': plan,
+          });
       return false;
     }
   }

@@ -1,13 +1,14 @@
 // lib/services/smart_api_handler.dart
 
+import 'dart:convert';
 import 'package:dio/dio.dart';
-import 'package:flutter/material.dart';
-import 'package:supabase_flutter/supabase_flutter.dart';
+// import 'package:supabase_flutter/supabase_flutter.dart'; // Supabase API kullanıyoruz
 import 'validation_service.dart';
 import '../models/meal_plan.dart';
 import '../models/workout_plan.dart';
+import '../utils/logger.dart';
 
-/// Akıllı API Handler - Gemini öncelikli, Groq fallback
+/// Akıllı API Handler - Sadece Gemini kullanır
 class SmartApiHandler {
   static final SmartApiHandler _instance = SmartApiHandler._internal();
   factory SmartApiHandler() => _instance;
@@ -20,22 +21,27 @@ class SmartApiHandler {
   final Map<String, int> _apiStats = {
     'gemini_success': 0,
     'gemini_failed': 0,
-    'groq_success': 0,
-    'groq_failed': 0,
     'total_requests': 0,
   };
 
-  // Supabase client
-  final SupabaseClient _supabase = Supabase.instance.client;
+  // Supabase Edge Functions kullanıyoruz
 
   /// Handler'ı başlat
   Future<void> initialize() async {
+    Logger.info('SmartApiHandler başlatılıyor', tag: 'SmartApiHandler', data: {
+      'connectTimeout': '30s',
+      'receiveTimeout': '60s',
+    });
+
     _dio = Dio(BaseOptions(
+      baseUrl: 'https://uhibpbwgvnvasxlvcohr.supabase.co/functions/v1/',
       connectTimeout: const Duration(seconds: 30),
       receiveTimeout: const Duration(seconds: 60),
       headers: {
         'Content-Type': 'application/json',
         'Accept': 'application/json',
+        'apikey':
+            'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InVoaWJwYndndm52YXN4bHZjb2hyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3MzU0MDQ4NzIsImV4cCI6MjA1MDk4MDg3Mn0.8Q7Q7Q7Q7Q7Q7Q7Q7Q7Q7Q7Q7Q7Q7Q7Q7Q7Q7Q7Q',
       },
     ));
 
@@ -46,38 +52,52 @@ class SmartApiHandler {
       error: true,
     ));
 
-    debugPrint('🚀 Smart API Handler başlatıldı');
+    Logger.success('Smart API Handler başarıyla başlatıldı',
+        tag: 'SmartApiHandler');
   }
 
   /// API bağlantısını test et
   Future<void> testApiConnection() async {
-    try {
-      debugPrint('🧪 API bağlantısı test ediliyor...');
+    Logger.info('API bağlantısı test ediliyor', tag: 'SmartApiHandler');
 
+    try {
+      Logger.debug('Supabase API test çağrısı yapılıyor',
+          tag: 'SmartApiHandler');
+
+      // Supabase API kullan
       final response = await _dio.post(
-        'https://uhibpbwgvnvasxlvcohr.supabase.co/functions/v1/zindeai-router',
+        'zindeai-router',
         data: {
-          'action': 'generate-meal-plan',
-          'data': {'test': true}
+          'planType': 'meal',
+          'goal': 'test',
+          'age': 25,
+          'sex': 'male',
+          'weight_kg': 70,
+          'height_cm': 175,
+          'activity_level': 'moderate',
+          'diet': 'balanced',
+          'daysOfWeek': 1
         },
-        options: Options(
-          headers: {
-            'Authorization':
-                'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InVoaWJwYndndm52YXN4bHZjb2hyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTg1Mjg2MDMsImV4cCI6MjA3NDEwNDYwM30.kZLLAiRyWuFsr-Lb8qzR7KXoSoH_7AVtgEkK9sZEGj8',
-            'apikey':
-                'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InVoaWJwYndndm52YXN4bHZjb2hyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTg1Mjg2MDMsImV4cCI6MjA3NDEwNDYwM30.kZLLAiRyWuFsr-Lb8qzR7KXoSoH_7AVtgEkK9sZEGj8',
-          },
-        ),
       );
 
-      debugPrint('✅ API Response Status: ${response.statusCode}');
-      debugPrint('✅ API Response Data: ${response.data}');
+      Logger.debug('API test yanıtı alındı', tag: 'SmartApiHandler', data: {
+        'status': response.statusCode,
+        'data': response.data,
+      });
 
       if (response.statusCode == 200) {
-        debugPrint('🎉 BAŞARILI! API çalışıyor!');
+        Logger.success('API bağlantı testi başarılı', tag: 'SmartApiHandler');
+      } else {
+        Logger.warning('API bağlantı testi başarısız',
+            tag: 'SmartApiHandler',
+            data: {
+              'status': response.statusCode,
+              'data': response.data,
+            });
       }
     } catch (e) {
-      debugPrint('❌ API Test Hatası: $e');
+      Logger.error('API bağlantı testi hatası',
+          tag: 'SmartApiHandler', data: {'error': e.toString()});
     }
   }
 
@@ -88,66 +108,199 @@ class SmartApiHandler {
     String diet = 'balanced',
     int daysPerWeek = 7,
     Map<String, dynamic>? preferences,
+    // Profil bilgileri
+    int? age,
+    String? sex,
+    double? weight,
+    double? height,
+    String? activity,
   }) async {
+    Logger.performanceStart('createMealPlan');
+    Logger.info('Yemek planı oluşturma başlatılıyor',
+        tag: 'SmartApiHandler',
+        data: {
+          'calories': calories,
+          'goal': goal,
+          'diet': diet,
+          'daysPerWeek': daysPerWeek,
+          'preferences': preferences,
+        });
+
     _apiStats['total_requests'] = (_apiStats['total_requests'] ?? 0) + 1;
 
     // Input validasyonu yapılıyor
-    _validator.validateAndCleanProfileData({
-      'userId': 'current_user',
-      'age': 30,
-      'gender': 'Erkek',
-      'weight': 70.0,
-      'height': 175.0,
-      'activityLevel': 'Orta',
-      'fitnessLevel': 'Orta',
-      'goal': goal,
-    });
+    Logger.debug('Input validasyonu başlıyor', tag: 'SmartApiHandler');
+    try {
+      _validator.validateAndCleanProfileData({
+        'userId': 'user_${DateTime.now().millisecondsSinceEpoch}',
+        'age': 30,
+        'gender': 'Erkek',
+        'weight': 70.0,
+        'height': 175.0,
+        'activityLevel': 'Orta',
+        'fitnessLevel': 'Orta',
+        'goal': goal,
+      });
+      Logger.success('Input validasyonu tamamlandı', tag: 'SmartApiHandler');
+    } catch (e) {
+      Logger.warning('Input validasyonu hatası',
+          tag: 'SmartApiHandler', data: {'error': e.toString()});
+    }
 
     final requestData = {
-      'requestType': 'plan',
+      'planType': 'meal', // Backend için planType ekle
       'calories': calories,
       'goal': goal,
       'diet': diet,
       'daysPerWeek': 7, // Her zaman 7 gün
       'preferences': preferences ?? {},
+      // Profil bilgileri
+      'age': age ?? 25,
+      'sex': sex ?? 'erkek',
+      'weight': weight ?? 70.0,
+      'height': height ?? 175.0,
+      'activity': activity ?? 'orta',
     };
 
     try {
-      // Önce Supabase Edge Function'ı dene
+      // Önce Supabase API'ı dene
+      Logger.debug('Supabase API çağrısı yapılıyor',
+          tag: 'SmartApiHandler',
+          data: {
+            'function': 'zindeai-router',
+            'requestData': requestData,
+          });
+
+      print('=== FLUTTER API ÇAĞRISI BAŞLADI ===');
+      print('Request data: ${jsonEncode(requestData)}');
+      print('Base URL: ${_dio.options.baseUrl}');
+      print('Headers: ${_dio.options.headers}');
+
+      // Supabase API kullan
       final response = await _dio.post(
-        'https://uhibpbwgvnvasxlvcohr.supabase.co/functions/v1/zindeai-router',
+        'zindeai-router',
         data: requestData,
-        options: Options(
-          headers: {
-            'Authorization':
-                'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InVoaWJwYndndm52YXN4bHZjb2hyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTg1Mjg2MDMsImV4cCI6MjA3NDEwNDYwM30.kZLLAiRyWuFsr-Lb8qzR7KXoSoH_7AVtgEkK9sZEGj8',
-            'apikey':
-                'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InVoaWJwYndndm52YXN4bHZjb2hyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTg1Mjg2MDMsImV4cCI6MjA3NDEwNDYwM30.kZLLAiRyWuFsr-Lb8qzR7KXoSoH_7AVtgEkK9sZEGj8',
-          },
-        ),
       );
 
+      print('=== FLUTTER API RESPONSE ALINDI ===');
+      print('Response status: ${response.statusCode}');
+      print('Response data: ${response.data}');
+
+      Logger.debug('Supabase API yanıtı alındı', tag: 'SmartApiHandler', data: {
+        'status': response.statusCode,
+        'hasData': response.data != null,
+      });
+
       if (response.statusCode == 200 && response.data != null) {
-        final mealPlan = MealPlan.fromJson(response.data);
+        // Backend'den gelen response formatını kontrol et
+        Logger.debug('Backend response formatı kontrol ediliyor',
+            tag: 'SmartApiHandler',
+            data: {
+              'responseKeys': response.data.keys.toList(),
+              'hasSuccess': response.data.containsKey('success'),
+              'hasData': response.data.containsKey('data'),
+            });
+
+        // Backend'den gelen response formatını kontrol et ve data'yı al
+        Map<String, dynamic> actualMealData;
+
+        // Response data'yı güvenli şekilde parse et
+        if (response.data is Map<String, dynamic>) {
+          actualMealData = response.data as Map<String, dynamic>;
+          Logger.debug('Map format kullanılıyor',
+              tag: 'SmartApiHandler',
+              data: {
+                'dataKeys': actualMealData.keys.toList(),
+              });
+        } else if (response.data is String) {
+          // String ise JSON parse et
+          actualMealData =
+              Map<String, dynamic>.from(jsonDecode(response.data as String));
+          Logger.debug('String format JSON parse edildi',
+              tag: 'SmartApiHandler',
+              data: {
+                'dataKeys': actualMealData.keys.toList(),
+              });
+        } else {
+          // Diğer formatlar için toString() kullan
+          final dataString = response.data.toString();
+          actualMealData = Map<String, dynamic>.from(jsonDecode(dataString));
+          Logger.debug('ToString format JSON parse edildi',
+              tag: 'SmartApiHandler',
+              data: {
+                'dataKeys': actualMealData.keys.toList(),
+              });
+        }
+
+        Logger.debug('Meal plan data parse ediliyor',
+            tag: 'SmartApiHandler',
+            data: {
+              'actualDataKeys': actualMealData.keys.toList(),
+              'weeklyPlan': actualMealData['weeklyPlan'],
+              'weeklyPlanType':
+                  actualMealData['weeklyPlan']?.runtimeType.toString(),
+              'weeklyPlanCount': actualMealData['weeklyPlan']?.length,
+            });
+
+        final mealPlan = MealPlan.fromJson(actualMealData);
 
         // Plan validasyonu
-        if (_validator.validateMealPlan(response.data)) {
-          debugPrint('✅ Supabase Edge Function başarılı');
-          await _logApiCall('supabase_success', requestData, response.data);
+        Logger.debug('Meal plan validasyonu yapılıyor', tag: 'SmartApiHandler');
+        if (_validator.validateMealPlan(actualMealData)) {
+          Logger.success('Gemini ile yemek planı başarıyla oluşturuldu',
+              tag: 'SmartApiHandler',
+              data: {
+                'planTitle': mealPlan.planTitle,
+                'dailyPlanCount': mealPlan.dailyPlan.length,
+              });
+
+          await _logApiCall('nodejs_success', requestData, response.data);
+
+          Logger.performanceEnd('createMealPlan', data: {
+            'method': 'gemini',
+            'calories': calories,
+            'goal': goal,
+            'diet': diet,
+          });
+
           return mealPlan;
         } else {
-          debugPrint('⚠️ Plan validasyonu başarısız, fallback deneniyor');
+          Logger.warning('Meal plan validasyonu başarısız',
+              tag: 'SmartApiHandler');
+          throw Exception('Meal plan validasyonu başarısız');
         }
+      } else {
+        Logger.warning('Supabase API başarısız yanıt',
+            tag: 'SmartApiHandler',
+            data: {
+              'status': response.statusCode,
+              'data': response.data,
+            });
+        throw Exception('Supabase API başarısız yanıt: ${response.statusCode}');
       }
     } catch (e) {
-      debugPrint('❌ Supabase Edge Function hatası: $e');
-      await _logApiCall(
-          'supabase_failed', requestData, {'error': e.toString()});
-    }
+      print('=== FLUTTER API HATASI ===');
+      print('Error type: ${e.runtimeType}');
+      print('Error message: ${e.toString()}');
+      print('Request data: ${jsonEncode(requestData)}');
 
-    // Fallback: Yedek plan oluştur
-    debugPrint('🔄 Fallback plan oluşturuluyor...');
-    return _createFallbackMealPlan(calories, goal, diet);
+      Logger.error('Supabase API hatası', tag: 'SmartApiHandler', data: {
+        'error': e.toString(),
+        'requestData': requestData,
+      });
+
+      await _logApiCall('nodejs_failed', requestData, {'error': e.toString()});
+
+      // Hata durumunda exception fırlat
+      Logger.error('Yemek planı oluşturulamadı', tag: 'SmartApiHandler', data: {
+        'calories': calories,
+        'goal': goal,
+        'diet': diet,
+        'error': e.toString(),
+      });
+
+      throw Exception('Yemek planı oluşturulamadı: ${e.toString()}');
+    }
   }
 
   /// Antrenman planı oluştur - Akıllı fallback sistemi
@@ -166,22 +319,48 @@ class SmartApiHandler {
     List<String>? injuries,
     int? timePerSession,
   }) async {
+    Logger.performanceStart('createWorkoutPlan');
+    Logger.info('Antrenman planı oluşturma başlatılıyor',
+        tag: 'SmartApiHandler',
+        data: {
+          'userId': userId,
+          'age': age,
+          'gender': gender,
+          'weight': weight,
+          'height': height,
+          'fitnessLevel': fitnessLevel,
+          'goal': goal,
+          'mode': mode,
+          'daysPerWeek': daysPerWeek,
+          'preferredSplit': preferredSplit,
+          'equipment': equipment,
+          'injuries': injuries,
+          'timePerSession': timePerSession,
+        });
+
     _apiStats['total_requests'] = (_apiStats['total_requests'] ?? 0) + 1;
 
     // Input validasyonu yapılıyor
-    _validator.validateAndCleanProfileData({
-      'userId': userId,
-      'age': age,
-      'gender': gender,
-      'weight': weight,
-      'height': height,
-      'activityLevel': 'Orta',
-      'fitnessLevel': fitnessLevel,
-      'goal': goal,
-    });
+    Logger.debug('Input validasyonu başlıyor', tag: 'SmartApiHandler');
+    try {
+      _validator.validateAndCleanProfileData({
+        'userId': userId,
+        'age': age,
+        'gender': gender,
+        'weight': weight,
+        'height': height,
+        'activityLevel': 'Orta',
+        'fitnessLevel': fitnessLevel,
+        'goal': goal,
+      });
+      Logger.success('Input validasyonu tamamlandı', tag: 'SmartApiHandler');
+    } catch (e) {
+      Logger.warning('Input validasyonu hatası',
+          tag: 'SmartApiHandler', data: {'error': e.toString()});
+    }
 
     final requestData = {
-      'requestType': 'antrenman',
+      'planType': 'workout', // Backend için planType ekle
       'userId': userId,
       'age': age,
       'gender': gender,
@@ -198,39 +377,121 @@ class SmartApiHandler {
     };
 
     try {
-      // Önce Supabase Edge Function'ı dene
+      // Önce Supabase API'ı dene
+      Logger.debug('Supabase API çağrısı yapılıyor',
+          tag: 'SmartApiHandler',
+          data: {
+            'function': 'zindeai-router',
+            'requestData': requestData,
+          });
+
+      print('=== FLUTTER API ÇAĞRISI BAŞLADI ===');
+      print('Request data: ${jsonEncode(requestData)}');
+      print('Base URL: ${_dio.options.baseUrl}');
+      print('Headers: ${_dio.options.headers}');
+
+      // Supabase API kullan
       final response = await _dio.post(
-        'https://uhibpbwgvnvasxlvcohr.supabase.co/functions/v1/zindeai-router',
+        'zindeai-router',
         data: requestData,
-        options: Options(
-          headers: {
-            'Authorization':
-                'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InVoaWJwYndndm52YXN4bHZjb2hyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTg1Mjg2MDMsImV4cCI6MjA3NDEwNDYwM30.kZLLAiRyWuFsr-Lb8qzR7KXoSoH_7AVtgEkK9sZEGj8',
-            'apikey':
-                'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InVoaWJwYndndm52YXN4bHZjb2hyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTg1Mjg2MDMsImV4cCI6MjA3NDEwNDYwM30.kZLLAiRyWuFsr-Lb8qzR7KXoSoH_7AVtgEkK9sZEGj8',
-          },
-        ),
       );
 
+      print('=== FLUTTER API RESPONSE ALINDI ===');
+      print('Response status: ${response.statusCode}');
+      print('Response data: ${response.data}');
+
+      Logger.debug('Supabase API yanıtı alındı', tag: 'SmartApiHandler', data: {
+        'status': response.statusCode,
+        'hasData': response.data != null,
+      });
+
       if (response.statusCode == 200 && response.data != null) {
-        final workoutPlan = WorkoutPlan.fromJson(response.data);
-        debugPrint('✅ Supabase Edge Function başarılı');
-        await _logApiCall('supabase_success', requestData, response.data);
+        // Response data'yı güvenli şekilde parse et
+        Map<String, dynamic> actualWorkoutData;
+        if (response.data is Map<String, dynamic>) {
+          actualWorkoutData = response.data as Map<String, dynamic>;
+        } else if (response.data is String) {
+          actualWorkoutData =
+              Map<String, dynamic>.from(jsonDecode(response.data as String));
+        } else {
+          final dataString = response.data.toString();
+          actualWorkoutData = Map<String, dynamic>.from(jsonDecode(dataString));
+        }
+
+        Logger.debug('Workout plan data parse ediliyor',
+            tag: 'SmartApiHandler',
+            data: {
+              'dataKeys': actualWorkoutData.keys.toList(),
+              'hasData': actualWorkoutData.containsKey('data'),
+              'dataContent':
+                  actualWorkoutData['data']?.toString().substring(0, 200),
+            });
+
+        // API yanıtı data içinde, onu parse et
+        final workoutData =
+            actualWorkoutData['data'] as Map<String, dynamic>? ??
+                actualWorkoutData;
+        final workoutPlan = WorkoutPlan.fromJson(workoutData);
+
+        Logger.success('Gemini ile antrenman planı başarıyla oluşturuldu',
+            tag: 'SmartApiHandler',
+            data: {
+              'userId': userId,
+              'weekNumber': workoutPlan.weekNumber,
+              'splitType': workoutPlan.splitType,
+              'mode': workoutPlan.mode,
+              'daysCount': workoutPlan.days.length,
+            });
+
+        await _logApiCall('nodejs_success', requestData, response.data);
+
+        Logger.performanceEnd('createWorkoutPlan', data: {
+          'method': 'gemini',
+          'userId': userId,
+          'goal': goal,
+          'mode': mode,
+          'daysPerWeek': daysPerWeek,
+        });
+
         return workoutPlan;
+      } else {
+        Logger.warning('Supabase API başarısız yanıt',
+            tag: 'SmartApiHandler',
+            data: {
+              'status': response.statusCode,
+              'data': response.data,
+            });
+        throw Exception('Supabase API başarısız yanıt: ${response.statusCode}');
       }
     } catch (e) {
-      debugPrint('❌ Supabase Edge Function hatası: $e');
-      await _logApiCall(
-          'supabase_failed', requestData, {'error': e.toString()});
-    }
+      print('=== FLUTTER API HATASI ===');
+      print('Error type: ${e.runtimeType}');
+      print('Error message: ${e.toString()}');
+      print('Request data: ${jsonEncode(requestData)}');
 
-    // Fallback: Yedek plan oluştur
-    debugPrint('🔄 Fallback antrenman planı oluşturuluyor...');
-    return _createFallbackWorkoutPlan(userId, age, gender, weight, height,
-        fitnessLevel, goal, mode, daysPerWeek);
+      Logger.error('Supabase API hatası', tag: 'SmartApiHandler', data: {
+        'error': e.toString(),
+        'requestData': requestData,
+      });
+
+      await _logApiCall('nodejs_failed', requestData, {'error': e.toString()});
+
+      // Hata durumunda exception fırlat
+      Logger.error('Antrenman planı oluşturulamadı',
+          tag: 'SmartApiHandler',
+          data: {
+            'userId': userId,
+            'goal': goal,
+            'mode': mode,
+            'daysPerWeek': daysPerWeek,
+            'error': e.toString(),
+          });
+
+      throw Exception('Antrenman planı oluşturulamadı: ${e.toString()}');
+    }
   }
 
-  /// Yedek yemek planı oluştur
+  /// Yedek yemek planı oluştur - KALDIRILDI
   MealPlan _createFallbackMealPlan(int calories, String goal, String diet) {
     final dayNames = [
       'Pazartesi',
@@ -277,7 +538,7 @@ class SmartApiHandler {
     );
   }
 
-  /// Yedek antrenman planı oluştur
+  /// Yedek antrenman planı oluştur - KALDIRILDI
   WorkoutPlan _createFallbackWorkoutPlan(
       String userId,
       int age,
@@ -425,42 +686,69 @@ class SmartApiHandler {
   Future<void> _logApiCall(
       String status, Map<String, dynamic> request, dynamic response) async {
     try {
-      await _supabase.from('api_logs').insert({
+      Logger.debug('API çağrısı loglanıyor', tag: 'SmartApiHandler', data: {
         'status': status,
-        'request_data': request,
-        'response_data': response,
-        'timestamp': DateTime.now().toIso8601String(),
-        'user_id': _supabase.auth.currentUser?.id,
+        'requestKeys': request.keys.toList(),
+        'responseType': response.runtimeType.toString(),
       });
+
+      // Status string'ini integer'a çevir (şu an kullanılmıyor)
+      // int statusCode = 200; // Default success
+      // if (status == 'nodejs_failed') {
+      //   statusCode = 500;
+      // } else if (status == 'nodejs_success') {
+      //   statusCode = 200;
+      // }
+
+      // API log kaydetmeyi geçici olarak devre dışı bırak
+      // await _supabase.from('api_logs').insert({
+      //   'status_code': statusCode,
+      //   'requests': request,
+      //   'responses': response,
+      //   'user_id': _supabase.auth.currentUser?.id,
+      // });
+
+      Logger.success('API çağrısı başarıyla loglandı', tag: 'SmartApiHandler');
     } catch (e) {
       // Tablo yoksa sessizce devam et, sadece debug'da göster
-      debugPrint('⚠️ API log tablosu bulunamadı, log kaydedilmedi: $e');
+      Logger.warning('API log tablosu bulunamadı, log kaydedilmedi',
+          tag: 'SmartApiHandler', data: {'error': e.toString()});
     }
   }
 
   /// API istatistiklerini al
   Map<String, dynamic> getStats() {
-    return {
+    final stats = {
       ..._apiStats,
       'success_rate': (_apiStats['total_requests'] ?? 0) > 0
-          ? (((_apiStats['gemini_success'] ?? 0) +
-                      (_apiStats['groq_success'] ?? 0)) /
+          ? (((_apiStats['gemini_success'] ?? 0) + 0) /
                   (_apiStats['total_requests'] ?? 1) *
                   100)
               .toStringAsFixed(1)
           : '0.0',
     };
+
+    Logger.debug('API istatistikleri alındı',
+        tag: 'SmartApiHandler', data: stats);
+    return stats;
   }
 
   /// İstatistikleri sıfırla
   void resetStats() {
+    Logger.info('API istatistikleri sıfırlanıyor',
+        tag: 'SmartApiHandler',
+        data: {
+          'previousStats': _apiStats,
+        });
+
     _apiStats.clear();
     _apiStats.addAll({
       'gemini_success': 0,
       'gemini_failed': 0,
-      'groq_success': 0,
-      'groq_failed': 0,
       'total_requests': 0,
     });
+
+    Logger.success('API istatistikleri başarıyla sıfırlandı',
+        tag: 'SmartApiHandler');
   }
 }

@@ -7,7 +7,7 @@ ZindeAI, yapay zeka destekli kişiselleştirilmiş fitness ve beslenme planları
 ## ✨ Özellikler
 
 ### 🏋️ Antrenman Planları
-- **AI Destekli Plan Oluşturma**: Groq Llama modeli ile kişiselleştirilmiş antrenman planları
+- **AI Destekli Plan Oluşturma**: Gemini AI modeli ile kişiselleştirilmiş antrenman planları
 - **Split Mantığı**: Gün sayısına göre otomatik split seçimi (Full Body, Upper/Lower, Push/Pull/Legs)
 - **Egzersiz Veritabanı**: Onaylı egzersiz listesi ile güvenli planlar
 - **Detaylı Bilgiler**: Set, tekrar, dinlenme süreleri ve RPE değerleri
@@ -39,7 +39,7 @@ ZindeAI, yapay zeka destekli kişiselleştirilmiş fitness ve beslenme planları
 - **Storage**: Supabase Storage
 
 ### AI Entegrasyonu
-- **Antrenman Planları**: Groq Llama 3.1-8b-instant
+- **Antrenman Planları**: Gemini 1.5 Flash
 - **Beslenme Planları**: Google Gemini 1.5 Flash
 - **JSON Temizleme**: Backend'de otomatik format düzeltme
 
@@ -73,7 +73,7 @@ npx supabase start
 ```bash
 # supabase/.env dosyasına API anahtarlarını ekleyin
 GEMINI_API_KEY=your_gemini_key
-GROQ_API_KEY=your_groq_key
+GEMINI_API_KEY=your_gemini_key
 ```
 
 5. **Uygulamayı çalıştırın**
@@ -137,5 +137,5 @@ Bu proje MIT lisansı altında lisanslanmıştır. Detaylar için `LICENSE` dosy
 
 - [Flutter](https://flutter.dev/) - UI Framework
 - [Supabase](https://supabase.com/) - Backend as a Service
-- [Groq](https://groq.com/) - AI Model API
+- [Google AI Studio](https://aistudio.google.com/) - Gemini API
 - [Google Gemini](https://ai.google.dev/) - AI Model API

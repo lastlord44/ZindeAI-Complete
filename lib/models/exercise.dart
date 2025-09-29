@@ -28,6 +28,18 @@ class ExerciseMetadata {
       thumbnail: json['thumbnail'],
     );
   }
+
+  Map<String, dynamic> toJson() {
+    return {
+      'exerciseId': exerciseId,
+      'source': source,
+      'available': available,
+      'mediaUrls': mediaUrls,
+      'preferredFormat': preferredFormat,
+      'dimensions': dimensions,
+      'thumbnail': thumbnail,
+    };
+  }
 }
 
 class BatchCheckResult {
@@ -42,6 +54,12 @@ class BatchCheckResult {
               .toList() ??
           [],
     );
+  }
+
+  Map<String, dynamic> toJson() {
+    return {
+      'results': results.map((item) => item.toJson()).toList(),
+    };
   }
 }
 
@@ -65,5 +83,14 @@ class ExerciseCheck {
       url: json['url'],
       format: json['format'],
     );
+  }
+
+  Map<String, dynamic> toJson() {
+    return {
+      'exerciseId': exerciseId,
+      'exists': exists,
+      'url': url,
+      'format': format,
+    };
   }
 }
