@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import 'dart:convert';
 
 class MealTrackerScreen extends StatefulWidget {
   final Map<String, dynamic> mealPlan;
@@ -12,7 +13,6 @@ class MealTrackerScreen extends StatefulWidget {
 
 class _MealTrackerScreenState extends State<MealTrackerScreen> {
   Map<String, Map<String, bool>> weeklyProgress = {};
-  final supabase = Supabase.instance.client;
   
   @override
   void initState() {
@@ -110,17 +110,13 @@ class _MealTrackerScreenState extends State<MealTrackerScreen> {
   
   Future<void> _loadProgress() async {
     try {
-      final userId = supabase.auth.currentUser?.id;
-      final response = await supabase
-          .from('meal_progress')
-          .select()
-          .eq('user_id', userId)
-          .single();
-          
-      if (response != null) {
+      final prefs = await SharedPreferences.getInstance();
+      final progressJson = prefs.getString('meal_progress');
+      
+      if (progressJson != null) {
         setState(() {
           weeklyProgress = Map<String, Map<String, bool>>.from(
-            response['progress'] ?? {}
+            jsonDecode(progressJson)
           );
         });
       }
@@ -131,12 +127,8 @@ class _MealTrackerScreenState extends State<MealTrackerScreen> {
   
   Future<void> _saveProgress() async {
     try {
-      final userId = supabase.auth.currentUser?.id;
-      await supabase.from('meal_progress').upsert({
-        'user_id': userId,
-        'progress': weeklyProgress,
-        'updated_at': DateTime.now().toIso8601String(),
-      });
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setString('meal_progress', jsonEncode(weeklyProgress));
     } catch (e) {
       print('Progress kaydetme hatası: $e');
     }

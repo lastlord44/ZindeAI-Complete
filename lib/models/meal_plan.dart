@@ -42,6 +42,14 @@ class MealPlan {
           dailyPlanData.map((dayJson) => DailyPlan.fromJson(dayJson)).toList(),
     );
   }
+
+  Map<String, dynamic> toJson() {
+    return {
+      'planTitle': planTitle,
+      'summary': summary,
+      'dailyPlan': dailyPlan.map((day) => day.toJson()).toList(),
+    };
+  }
 }
 
 // DailyPlan.fromJson'ı güncelliyoruz
@@ -58,6 +66,13 @@ class DailyPlan {
   int get totalCarbsForDay =>
       meals.fold(0, (sum, meal) => sum + meal.totalCarbs);
   int get totalFatForDay => meals.fold(0, (sum, meal) => sum + meal.totalFat);
+
+  Map<String, dynamic> toJson() {
+    return {
+      'day': day,
+      'meals': meals.map((meal) => meal.toJson()).toList(),
+    };
+  }
 
   factory DailyPlan.fromJson(dynamic json) {
     // Gelen veri String ise, önce onu Map'e çevir
@@ -202,6 +217,15 @@ class Meal {
       recipe: map['recipe']?.toString(),
     );
   }
+
+  Map<String, dynamic> toJson() {
+    return {
+      'name': name,
+      'items': items.map((item) => item.toJson()).toList(),
+      'notes': notes,
+      'recipe': recipe,
+    };
+  }
 }
 
 class Ingredient {
@@ -235,5 +259,17 @@ class Ingredient {
       carbs: safeParseInt(map['carbs']),
       fat: safeParseInt(map['fat']),
     );
+  }
+
+  Map<String, dynamic> toJson() {
+    return {
+      'itemName': name,
+      'quantity': quantity,
+      'unit': unit,
+      'calories': calories,
+      'protein': protein,
+      'carbs': carbs,
+      'fat': fat,
+    };
   }
 }
