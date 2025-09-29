@@ -1,77 +1,94 @@
-ZindeAI Router Worker — Detaylı Manifest ve Proje Şablonu (GitHub İçin)
+ZindeAI - AI-Powered Fitness & Nutrition App — Detaylı Manifest ve Proje Şablonu (GitHub İçin)
 1. Proje Hedefi ve Özet
 Kapsam:
-Gemini Flash AI ile Türk pazarı için AI temelli fitness/diyet backend.
+Google Gemini AI ile Türk pazarı için AI temelli fitness/diyet uygulaması.
 Felsefe:
-$500 bütçe, free modeller, en hızlı MVP için “para bitene kadar ilerle” mantığı.
+$500 bütçe, free modeller, en hızlı MVP için "para bitene kadar ilerle" mantığı.
 Platformlar:
-Flutter (Android first) + Cloudflare Worker backend + Cloud Storage GIF sistemi.
+Flutter (Android first) + Supabase Edge Functions backend + Google AI Studio.
 Pricing:
 Ücretsiz (günde 2 plan) + Premium (sınırsız, progression/gif rehberi, 89TL)
 
 2. Proje Klasör Yapısı
 text
-zindeai-router-worker/
+ZindeAI_Projesi/
 ├─ README.md                # Kapsamlı proje dökümanı
 ├─ MANIFEST.md              # Ayrıntılı strateji ve roadmap (bu doküman)
-├─ wrangler.toml            # Cloudflare Worker config (KV, secret, vars)
-├─ package.json             # NPM bağımlılıkları
-├─ tsconfig.json            # TypeScript config
-├─ src/
-│  └─ index.ts              # Ana Worker kodu
-├─ docs/
-│  ├─ API.md                # Endpoint açıklamaları
-│  ├─ DEPLOYMENT.md         # Kurulum ve Deployment adımları
-│  ├─ ARCHITECTURE.md       # Detaylı teknik mimari
-│  └─ ROADMAP.md            # 8 haftalık milestone ve hedefler
-├─ scripts/
-│  ├─ setup.sh              # Hızlı kurulum scripti
-│  └─ deploy.sh             # Production deployment scripti
-└─ examples/
-   ├─ meal_plan_request.json # Örnek API isteği
-   ├─ workout_request.json   # Örnek API isteği
-   └─ flutter_integration.dart # Flutter entegrasyon örneği[1]
+├─ pubspec.yaml             # Flutter bağımlılıkları
+├─ lib/                     # Flutter uygulama kodu
+│  ├─ main.dart             # Ana uygulama dosyası
+│  ├─ models/               # Veri modelleri
+│  ├─ screens/              # UI ekranları
+│  ├─ services/             # API servisleri
+│  ├─ utils/                # Yardımcı fonksiyonlar
+│  └─ widgets/              # UI bileşenleri
+├─ supabase/                # Supabase backend
+│  ├─ functions/            # Edge Functions
+│  │  └─ zindeai-router/    # Ana AI router
+│  └─ config.toml           # Supabase config
+├─ android/                 # Android platform dosyaları
+├─ ios/                     # iOS platform dosyaları
+├─ docs/                    # Dokümantasyon
+│  ├─ api.md                # API endpoint açıklamaları
+│  ├─ deployment.md         # Kurulum ve deployment
+│  └─ test_guide.md         # Test rehberi
+└─ tests/                   # Test dosyaları
 3. Teknik Özellikler & Strateji
-🔄 Akıllı Fallback Chain
-Gemini 1.5 Flash (hız + yüksek kota, ilk deneme)
+🔄 AI Entegrasyonu
+Google Gemini 1.5 Flash (Google AI Studio)
+- API Key: Environment variable'dan alınır
+- Project: Environment variable'dan alınır
+- Doğrudan API kullanımı (Vertex AI değil)
 
-Gemini 2.5 Flash (free tier)
+Supabase Edge Functions
+- Deno TypeScript runtime
+- CORS desteği
+- Authentication: API Key based
+- Endpoint: /functions/v1/zindeai-router
 
-HuggingFace (yedek, düşük maliyet)
-
-Degrade Mode (offline deterministic JSON plan)
-
-Limit/Hata tabanlı geçiş:
-%90 kota dolduysa veya 429/5xx hata aldıysa sıradaki LLM, hepsi dolarsa degrade (network/kullanıcıyı asla üzmez).
+Flutter Frontend
+- Dio HTTP client
+- Provider state management
+- Material Design UI
+- Cross-platform (Android/iOS)
 
 💪 Fitness-Specific Features
-Akıllı Split Mantığı: 1–2 gün full body, üstü için opsiyonlar, 6+ ay deneyim gerekir koşulu.
+Akıllı Split Mantığı: AI otomatik split seçimi (Full Body, Upper/Lower, Push/Pull/Legs)
 
-GIF-destekli Egzersizler: Google Cloud Storage’tan proxy + local cache, fallback: metin rehber.
+Detaylı Egzersiz Planları: Set, tekrar, dinlenme süreleri, RPE değerleri
 
-Periyodizasyon: Haftalık (+1 tekrar/+2.5kg), aylık (değişim/yenileme), 3 aylık (hedef review)
+Periyodizasyon: Haftalık progression, aylık plan güncellemeleri
 
-Yerelleştirilmiş planlar: Türk mutfağı + özel makro hedefleri.
+Yerelleştirilmiş planlar: Türk mutfağı + özel makro hedefleri
 
-Premium gating: Sınırsız AI, progresyon, GIF rehberi, push nudge.
+Detaylı Tarifler: Gramaj, pişirme yöntemi, süre, kalori bilgileri
+
+Premium gating: Sınırsız AI, progresyon, detaylı rehberler
 
 📊 API Endpointleri (docs/API.md)
-POST /plan → Yemek planı üretimi (AI rotası: fallback zinciri otomatik)
+POST /functions/v1/zindeai-router → AI plan oluşturma
+- planType: "meal" → Beslenme planı
+- planType: "workout" → Antrenman planı
 
-POST /antrenman → Egzersiz/antrenman planı (AI + GIF)
+GET /health → Sistem sağlık kontrolü
 
-GET /health → Sistem sağlık, provider/kota canlılığı
+Flutter API Service
+- SmartApiHandler: Supabase Edge Function iletişimi
+- ApiService: Flutter uygulama API katmanı
+- ValidationService: Input validation
 
-GET /gif/{exercise_id} → GIF proxy endpoint
+🗃️ Supabase Mimarisi
+Edge Functions: Deno TypeScript runtime ile serverless functions
 
-🗃️ Cloudflare Mimarisi
-Rate Limiting: KV Namespace üzerinde günlük kota ve request sayaçları (her provider ayrık, gemini RPD PST bazlı sayılır)
+Authentication: API Key based (anon key)
 
-Circuit Breaker: Son 60 sn’de ≥5 hata → 2dk Soğuma (otomatik re-enable)
+CORS: Cross-origin support for Flutter app
 
-Caching: Plan ve gif cache
+Environment Variables: GEMINI_API_KEY, VERTEX_PROJECT_ID
 
-Monitoring: Header üzerinden x-ratelimit ve hata yönetimi, canlı provider health
+Monitoring: Supabase dashboard, Edge Function logs
+
+Error Handling: Comprehensive error logging and user feedback
 
 4. MVP ve Geliştirme Yol Haritası (docs/ROADMAP.md)
 Hafta	Milestone	Hedef/Aksiyon
@@ -90,41 +107,43 @@ Referral/viral: 1 ay premium referral, progress paylaşım, local partnerships
 6. Risk ve Yedek Planlar
 Pivot triggers: Engagement <%20, dönüşüm <%2, teknik hata >%50, para <$100.
 
-Fallback: HuggingFace, Supabase free fallback, reklam modeli, organik büyüme.
+Fallback: Google AI Studio free tier, Supabase free tier, reklam modeli, organik büyüme.
+
+Mevcut Hatalar:
+- JSON Parsing: Edge Function string response, Flutter Map bekliyor
+- UI Overflow: Uzun tarif metinleri UI'yi taşırıyor
+- API Response Format: Content-Type text/plain, application/json bekleniyor
 
 7. Kurulum Adımları (docs/DEPLOYMENT.md)
-Wrangler yükle:
-npm install -g wrangler
+Flutter Kurulumu:
+flutter pub get
 
-Secret’ları gir:
+Supabase Kurulumu:
+npx supabase start
 
-text
-wrangler secret put GEMINI_API_KEY
-wrangler secret put GEMINI_API_KEY
-wrangler secret put HF_TOKEN
-KV namespace oluştur ve wrangler.toml’a ID’leri ekle
+Environment Variables:
+# supabase/.env
+GEMINI_API_KEY=your_gemini_api_key_here
+VERTEX_PROJECT_ID=your_project_id_here
 
 Deploy:
+supabase functions deploy zindeai-router
 
-text
-npm install
-wrangler dev           # Lokal test
-wrangler deploy        # Production’a gönder
-Ortam değişkenleri (örnek wrangler.toml)
-text
-[vars]
-ROUTER_ORDER_TEXT = "gemini_flash"
-SAFETY_PCT = "0.10"
-GEMINI_RPD = "1000000"
-HF_RPD = "1000"
-GCS_BUCKET_URL = "https://storage.googleapis.com/zindeai-gifler"
+Flutter Run:
+flutter run
 8. Katkı ve Lisans
 Fork → branch → commit → pull request süreci.
 
 LISANS: Kendi ürünün için serbest; başka ürünlerde izinsiz kullanma.
 
-9. Ekstra: Flutter Entegrasyon & JSON Şemalar (examples/)
+9. Ekstra: Flutter Entegrasyon & JSON Şemalar
 Sample API request/response ve Flutter tarafı için örnek integration kodu ile zinde, tekrar kullanılabilir bir sistem.
+
+Flutter Models:
+- MealPlan: Beslenme planı modeli
+- WorkoutPlan: Antrenman planı modeli
+- UserProfile: Kullanıcı profil modeli
+- HealthStatus: Sağlık durumu modeli
 
 10. Kaynak ve Yorumlar
 Kaynak kodları parça parça açıklamalı şekilde dizine yayıldı.
@@ -132,4 +151,6 @@ Kaynak kodları parça parça açıklamalı şekilde dizine yayıldı.
 Her dosyada, ilgili micro-strateji ve edge case notları ile dokümante edildi.
 
 Türk pazarına optimize edilmiş, hızlı scale ve görece düşük harcama ile MVP odaklı net yol haritası içerir.
+
+GitHub Repository: https://github.com/lastlord44/ZindeAI-Complete
 
