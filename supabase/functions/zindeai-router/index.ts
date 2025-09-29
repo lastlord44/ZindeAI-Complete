@@ -1,226 +1,84 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts"
-  
-  const corsHeaders = {
-    'Access-Control-Allow-Origin': '*',
-    'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
-    'Access-Control-Allow-Methods': 'POST, GET, OPTIONS',
-}
 
-// Vertex AI Configuration
-const PROJECT_ID = 'august-journey-473119-t2'
-const LOCATION = 'us-central1'
-const MODEL_ID = 'gemini-2.0-flash'
-
-// Service Account Key - Load from environment variables
-const SERVICE_ACCOUNT_KEY = {
-  "type": "service_account",
-  "project_id": Deno.env.get("GOOGLE_PROJECT_ID") || "august-journey-473119-t2",
-  "private_key_id": Deno.env.get("GOOGLE_PRIVATE_KEY_ID") || "",
-  "private_key": Deno.env.get("GOOGLE_PRIVATE_KEY") || "",
-  "client_email": Deno.env.get("GOOGLE_CLIENT_EMAIL") || "",
-  "client_id": Deno.env.get("GOOGLE_CLIENT_ID") || "",
-  "auth_uri": "https://accounts.google.com/o/oauth2/auth",
-  "token_uri": "https://oauth2.googleapis.com/token",
-  "auth_provider_x509_cert_url": "https://www.googleapis.com/oauth2/v1/certs",
-  "client_x509_cert_url": `https://www.googleapis.com/robot/v1/metadata/x509/${Deno.env.get("GOOGLE_CLIENT_EMAIL") || ""}`,
-  "universe_domain": "googleapis.com"
-}
-
-// JWT token oluşturma fonksiyonu
-async function createJWT() {
-  console.log('=== JWT TOKEN OLUŞTURMA BAŞLADI ===')
-  const header = {
-    "alg": "RS256",
-    "typ": "JWT"
-  }
-  
-  const now = Math.floor(Date.now() / 1000)
-  const payload = {
-    "iss": SERVICE_ACCOUNT_KEY.client_email,
-    "scope": "https://www.googleapis.com/auth/cloud-platform",
-    "aud": "https://oauth2.googleapis.com/token",
-    "iat": now,
-    "exp": now + 3600
-  }
-  
-  const headerB64 = btoa(JSON.stringify(header))
-  const payloadB64 = btoa(JSON.stringify(payload))
-  const signatureInput = `${headerB64}.${payloadB64}`
-  
-  console.log('JWT signing başlıyor...')
-  
-  // Private key'i temizle ve parse et
-  const privateKeyPem = SERVICE_ACCOUNT_KEY.private_key
-    .replace(/-----BEGIN PRIVATE KEY-----/g, '')
-    .replace(/-----END PRIVATE KEY-----/g, '')
-    .replace(/\\n/g, '\n')
-    .replace(/\n/g, '')
-    .trim()
-  
-  console.log('Private key pem length:', privateKeyPem.length)
-  const privateKeyDer = Uint8Array.from(atob(privateKeyPem), c => c.charCodeAt(0))
-  
-  const key = await crypto.subtle.importKey(
-    "pkcs8",
-    privateKeyDer,
-    {
-      name: "RSASSA-PKCS1-v1_5",
-      hash: "SHA-256"
-    },
-    false,
-    ["sign"]
-  )
-  
-  const signature = await crypto.subtle.sign(
-    "RSASSA-PKCS1-v1_5",
-    key,
-    new TextEncoder().encode(signatureInput)
-  )
-  
-  const signatureB64 = btoa(String.fromCharCode(...new Uint8Array(signature)))
-  
-  console.log('JWT token oluşturuldu başarıyla')
-  return `${signatureInput}.${signatureB64}`
-}
-
-async function getAccessToken() {
-  try {
-    console.log('=== ACCESS TOKEN ALMA BAŞLADI ===')
-    const jwt = await createJWT()
-    
-    const response = await fetch("https://oauth2.googleapis.com/token", {
-      method: "POST",
-        headers: {
-        "Content-Type": "application/x-www-form-urlencoded"
-      },
-      body: new URLSearchParams({
-        "grant_type": "urn:ietf:params:oauth:grant-type:jwt-bearer",
-        "assertion": jwt
-      })
-    })
-    
-    if (!response.ok) {
-      const errorText = await response.text()
-      console.error(`Token request failed: ${response.status} - ${errorText}`)
-      throw new Error(`Token request failed: ${response.status}`)
-    }
-    
-    const data = await response.json()
-    console.log('Access token başarıyla alındı')
-    return data.access_token
-  } catch (error) {
-    console.error('Token generation error:', error)
-    throw error
-  }
+const corsHeaders = {
+  'Access-Control-Allow-Origin': '*',
+  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+  'Access-Control-Allow-Methods': 'POST, GET, OPTIONS',
 }
 
 serve(async (req) => {
   console.log('=== SUPABASE EDGE FUNCTION BAŞLADI ===')
   console.log('Request method:', req.method)
   console.log('Request URL:', req.url)
-  console.log('Request headers:', Object.fromEntries(req.headers.entries()))
-  
-  // Handle CORS preflight requests
+
+  // CORS
   if (req.method === 'OPTIONS') {
-    console.log('CORS preflight request handled')
     return new Response('ok', { headers: corsHeaders })
   }
 
-  // Auth kontrolü - sadece log için
-  const authHeader = req.headers.get('authorization')
-  const apikeyHeader = req.headers.get('apikey')
-  console.log('Auth header:', authHeader)
-  console.log('API key header:', apikeyHeader)
-  console.log('✅ Edge Function çalışıyor - auth kontrolü atlandı')
-
   try {
-    console.log('Request body parsing başlıyor...')
     const body = await req.json()
-    console.log('Raw request body:', JSON.stringify(body, null, 2))
+    console.log('Request body:', body)
     
-    const { planType, ...params } = body
-    
-    console.log('Received request:', { planType, params })
+    const { planType, calories, goal, diet, daysPerWeek, preferences, age, sex, weight, height, activity } = body
 
     if (planType === 'meal') {
-      console.log('=== MEAL PLAN OLUŞTURMA BAŞLADI ===')
-      const mealPlan = await generateMealPlan(params)
-      console.log('=== MEAL PLAN OLUŞTURULDU ===')
-      console.log('Meal plan response:', JSON.stringify(mealPlan, null, 2))
-      return new Response(
-        JSON.stringify({ success: true, data: mealPlan }),
-        { 
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-          status: 200 
-        }
-      )
+      return await generateMealPlan(body)
     } else if (planType === 'workout') {
-      console.log('=== WORKOUT PLAN OLUŞTURMA BAŞLADI ===')
-      const workoutPlan = await generateWorkoutPlan(params)
-      console.log('=== WORKOUT PLAN OLUŞTURULDU ===')
-      console.log('Workout plan response:', JSON.stringify(workoutPlan, null, 2))
-      return new Response(
-        JSON.stringify({ success: true, data: workoutPlan }),
-        { 
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-          status: 200 
-        }
-      )
+      return await generateWorkoutPlan(body)
     } else {
-      console.log('=== HATA: GEÇERSİZ PLAN TİPİ ===')
-      console.log('Plan type:', planType)
-      return new Response(
-        JSON.stringify({ success: false, error: 'Invalid plan type' }),
-        { 
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-          status: 400 
-        }
-      )
+      throw new Error('Invalid plan type')
     }
+
   } catch (error) {
     console.error('=== SUPABASE EDGE FUNCTION HATASI ===')
     console.error('Error type:', typeof error)
-    console.error('Error message:', error.message)
     console.error('Error stack:', error.stack)
-    console.error('Full error object:', JSON.stringify(error, null, 2))
-    return new Response(
-      JSON.stringify({ success: false, error: error.message }),
-      { 
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-        status: 500 
-      }
-    )
+    console.error('Full error object:', error)
+    console.error('Error message:', error.message)
+    
+    return new Response(JSON.stringify({ 
+      error: 'Request failed', 
+      details: error.message 
+    }), {
+      status: 500,
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+    })
   }
 })
 
 async function generateMealPlan(params: any) {
-  console.log('=== GENERATE MEAL PLAN FONKSİYONU BAŞLADI ===')
-  console.log('Input params:', JSON.stringify(params, null, 2))
-  
   const {
     age = 25,
-    sex = 'erkek',
+    sex = 'male',
     weight = 70,
     height = 175,
-    activity = 'orta',
-    diet = 'balanced',
     goal = 'maintain',
-    days = 7,
-    calories = 2000
+    diet = 'balanced',
+    calories = 2000,
+    daysPerWeek = 7,
+    activity = 'moderately_active'
   } = params
 
-  const actualAge = parseInt(age) || 25
-  const actualWeight = parseInt(weight) || 70
-  const actualHeight = parseInt(height) || 175
-  const actualSex = sex || 'erkek'
-  const actualActivity = activity || 'orta'
-  const actualDiet = diet || 'balanced'
-  const actualDays = parseInt(days) || 7
-  
-  console.log('Parsed values:', {
-    actualAge, actualWeight, actualHeight, actualSex, 
-    actualActivity, actualDiet, actualDays
-  })
+  const actualAge = parseInt(age.toString())
+  const actualWeight = parseFloat(weight.toString())
+  const actualHeight = parseFloat(height.toString())
+  const actualSex = sex.toString()
+  const actualGoal = goal.toString()
+  const actualDiet = diet.toString()
+  const actualDays = parseInt(daysPerWeek.toString())
+  const actualActivity = activity.toString()
+
+  console.log('=== MEAL PLAN PARAMETRELERİ ===')
+  console.log('Age:', actualAge)
+  console.log('Sex:', actualSex)
+  console.log('Weight:', actualWeight)
+  console.log('Height:', actualHeight)
+  console.log('Goal:', actualGoal)
+  console.log('Diet:', actualDiet)
+  console.log('Calories:', calories)
+  console.log('Days:', actualDays)
+  console.log('Activity:', actualActivity)
 
   const prompt = `Sen dünyanın en iyi diyetisyenisin! Profesyonel bir beslenme uzmanı olarak ${actualAge} yaşında, ${actualWeight}kg, ${actualHeight}cm boyunda ${actualSex} için ${actualDays} günlük detaylı beslenme planı oluştur.
       
@@ -229,7 +87,7 @@ async function generateMealPlan(params: any) {
       - Cinsiyet: ${actualSex}
       - Kilo: ${actualWeight} kg
       - Boy: ${actualHeight} cm
-      - Hedef: ${goal}
+      - Hedef: ${actualGoal}
       - Aktivite Seviyesi: ${actualActivity}
       - Diyet Tercihi: ${actualDiet}
       - Günlük Kalori: ${calories || 2000}
@@ -245,10 +103,14 @@ async function generateMealPlan(params: any) {
       8. Farklı sebze, meyve ve tahıl kombinasyonları oluştur
       9. TÜRK MUTFAĞI yemekleri tercih et
       10. Her yemek için DETAYLI TARİF yaz: malzemeler, gramajlar, pişirme yöntemi, süre
+      11. MUTLAKA her malzeme için gramaj belirt: "200g tavuk göğsü", "150g mercimek", "2 yemek kaşığı zeytinyağı"
+      12. Pişirme sürelerini dakika olarak belirt: "15 dakika haşla", "20 dakika kavur"
+      13. Porsiyon miktarlarını net belirt: "1 porsiyon için 300g", "2 kişilik"
+      14. Malzeme listesinde her şeyin miktarını yaz: "1 orta boy soğan (100g)", "2 diş sarımsak (10g)"
       
       JSON formatında yanıt ver:
       {
-        "goal": "${goal}",
+        "goal": "${actualGoal}",
         "user_info": {
           "age": ${actualAge},
           "sex": "${actualSex}",
@@ -269,7 +131,7 @@ async function generateMealPlan(params: any) {
               "carbs": "number",
               "fat": "number",
               "foods": ["string array"],
-              "recipe": "DETAYLI TARİF: Malzemeler (gramajlar), pişirme yöntemi, süre"
+              "recipe": "DETAYLI TARİF: Her malzeme için gramaj (200g tavuk, 150g mercimek), pişirme yöntemi (haşla, kavur), süre (15 dakika), porsiyon miktarı"
             },
             "snack1": {
               "name": "string",
@@ -278,7 +140,7 @@ async function generateMealPlan(params: any) {
               "carbs": "number",
               "fat": "number",
               "foods": ["string array"],
-              "recipe": "DETAYLI TARİF: Malzemeler (gramajlar), pişirme yöntemi, süre"
+              "recipe": "DETAYLI TARİF: Her malzeme için gramaj (200g tavuk, 150g mercimek), pişirme yöntemi (haşla, kavur), süre (15 dakika), porsiyon miktarı"
             },
             "lunch": {
               "name": "string",
@@ -287,7 +149,7 @@ async function generateMealPlan(params: any) {
               "carbs": "number",
               "fat": "number",
               "foods": ["string array"],
-              "recipe": "DETAYLI TARİF: Malzemeler (gramajlar), pişirme yöntemi, süre"
+              "recipe": "DETAYLI TARİF: Her malzeme için gramaj (200g tavuk, 150g mercimek), pişirme yöntemi (haşla, kavur), süre (15 dakika), porsiyon miktarı"
             },
             "snack2": {
               "name": "string",
@@ -296,7 +158,7 @@ async function generateMealPlan(params: any) {
               "carbs": "number",
               "fat": "number",
               "foods": ["string array"],
-              "recipe": "DETAYLI TARİF: Malzemeler (gramajlar), pişirme yöntemi, süre"
+              "recipe": "DETAYLI TARİF: Her malzeme için gramaj (200g tavuk, 150g mercimek), pişirme yöntemi (haşla, kavur), süre (15 dakika), porsiyon miktarı"
             },
             "dinner": {
               "name": "string",
@@ -305,45 +167,29 @@ async function generateMealPlan(params: any) {
               "carbs": "number",
               "fat": "number",
               "foods": ["string array"],
-              "recipe": "DETAYLI TARİF: Malzemeler (gramajlar), pişirme yöntemi, süre"
+              "recipe": "DETAYLI TARİF: Her malzeme için gramaj (200g tavuk, 150g mercimek), pişirme yöntemi (haşla, kavur), süre (15 dakika), porsiyon miktarı"
             }
           }
         ]
-      }
-      
-      ÖNEMLİ: 
-      - Sadece JSON formatında yanıt ver, başka açıklama yapma!
-      - Her gün için TAMAMEN FARKLI yemek isimleri ve detaylı besin listesi ver!
-      - ${actualDays} gün için farklı protein kaynakları kullan (balık, tavuk, et, hindi, yumurta, peynir vb.)
-      - Her gün farklı sebze, meyve ve tahıl kombinasyonları kullan!
-      - 5 öğün mutlaka olsun: breakfast, snack1, lunch, snack2, dinner
-      - Kullanıcının hedefi, yaşı, cinsiyeti ve aktivite seviyesine göre kişiselleştir!
-      - Günlük ${calories || 2000} kalori hedefine uygun porsiyonlar ver!
-      - TÜRK MUTFAĞI yemekleri öner (örn: "Mercimek Çorbası", "Karnıyarık", "İmam Bayıldı", "Köfte", "Pilav", "Bulgur Pilavı", "Kuru Fasulye", "Nohut", "Bakla", "Bamya", "Patlıcan Musakka", "Karnabahar Kızartması", "Mantı", "Lahmacun", "Pide", "Börek", "Gözleme", "Menemen", "Kavurma", "Sarma", "Dolma", "Çiğ Köfte", "Kısır", "Bulgur Pilavı", "Pirinç Pilavı", "Makarna")!
-      - Her yemek için DETAYLI TARİF ekle: malzemeler, gramajlar, pişirme yöntemi, süre!
-      - Örnek: "200g tavuk göğsü haşla, 1 su bardağı mercimek kaynat, 1 yemek kaşığı zeytinyağı ekle"!
-      - Kullanıcı tam olarak ne yapacağını bilsin!`
+      }`
 
   try {
-    console.log('=== VERTEX AI ÇAĞRISI BAŞLADI ===')
-    // Vertex AI endpoint
-    const vertexAIEndpoint = `https://${LOCATION}-aiplatform.googleapis.com/v1/projects/${PROJECT_ID}/locations/${LOCATION}/publishers/google/models/${MODEL_ID}:generateContent`
+    console.log('=== GEMINI API ÇAĞRISI BAŞLADI ===')
     
-    console.log('Vertex AI endpoint:', vertexAIEndpoint)
+    // Gemini API endpoint
+    const apiKey = "AIzaSyDBKGbsPR3LRs7dRYqkn4_QXEMmUvv8wE0"
+    const geminiEndpoint = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-exp:generateContent?key=${apiKey}`
+    
+    console.log('Gemini endpoint:', geminiEndpoint)
     console.log('Prompt length:', prompt.length)
     console.log('Prompt preview:', prompt.substring(0, 200) + '...')
     
-    const accessToken = await getAccessToken();
-    console.log('Access token generated:', !!accessToken);
-    console.log('Access token length:', accessToken?.length);
-    
-    const response = await fetch(vertexAIEndpoint, {
-        method: 'POST',
-        headers: {
-        'Authorization': `Bearer ${accessToken}`,
+    const response = await fetch(geminiEndpoint, {
+      method: 'POST',
+      headers: {
         'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
+      },
+      body: JSON.stringify({
         contents: [{
           role: 'user',
           parts: [{
@@ -359,136 +205,173 @@ async function generateMealPlan(params: any) {
       })
     })
 
-    console.log('Response status:', response.status);
-    console.log('Response headers:', Object.fromEntries(response.headers.entries()));
+    console.log('Response status:', response.status)
+    console.log('Response headers:', Object.fromEntries(response.headers.entries()))
 
     if (!response.ok) {
-      const errorText = await response.text();
-      console.error('Vertex AI error response:', errorText);
-      throw new Error(`Vertex AI API failed: ${response.status} ${response.statusText} - ${errorText}`)
+      const errorText = await response.text()
+      console.error('Gemini API error response:', errorText)
+      throw new Error(`Gemini API failed: ${response.status} ${response.statusText} - ${errorText}`)
     }
 
     const data = await response.json()
-    console.log('Vertex AI response data:', JSON.stringify(data, null, 2));
+    console.log('Gemini API response received')
     
-    const geminiText = data.candidates[0].content.parts[0].text
-    
-    console.log('Vertex AI raw response:', geminiText)
-    
-    // JSON'u parse et
-    const jsonMatch = geminiText.match(/\{[\s\S]*\}/)
-    if (!jsonMatch) {
-      throw new Error('No JSON found in Vertex AI response')
+    if (data.candidates && data.candidates[0] && data.candidates[0].content) {
+      const generatedText = data.candidates[0].content.parts[0].text
+      console.log('Generated text length:', generatedText.length)
+      console.log('Generated text preview:', generatedText.substring(0, 200) + '...')
+      
+      try {
+        // JSON'u parse et
+        const jsonMatch = generatedText.match(/\{[\s\S]*\}/)
+        if (!jsonMatch) {
+          throw new Error('No JSON found in Gemini response')
+        }
+        
+        const mealPlan = JSON.parse(jsonMatch[0])
+        console.log('✅ Meal plan JSON parsed successfully')
+        
+        // Her günün öğün sayısını kontrol et
+        if (mealPlan.meals && mealPlan.meals.length > 0) {
+          console.log('=== ÖĞÜN KONTROLÜ ===')
+          mealPlan.meals.forEach((day: any, index: number) => {
+            const mealKeys = Object.keys(day).filter(key => key !== 'day')
+            console.log(`Gün ${day.day}: ${mealKeys.length} öğün - ${mealKeys.join(', ')}`)
+          })
+        }
+        
+        return new Response(JSON.stringify(mealPlan), {
+          status: 200,
+          headers: corsHeaders
+        })
+      } catch (parseError) {
+        console.error('❌ JSON parse error:', parseError)
+        console.log('Raw generated text:', generatedText)
+        throw new Error(`JSON parse error: ${parseError.message}`)
+      }
+    } else {
+      console.error('❌ Invalid response structure:', data)
+      throw new Error('Invalid response structure from Gemini API')
     }
-    
-    const parsedData = JSON.parse(jsonMatch[0])
-    console.log('Parsed Vertex AI data:', JSON.stringify(parsedData, null, 2))
-    
-    // Her günün öğün sayısını kontrol et
-    if (parsedData.meals && parsedData.meals.length > 0) {
-      console.log('=== ÖĞÜN KONTROLÜ ===')
-      parsedData.meals.forEach((day: any, index: number) => {
-        const mealKeys = Object.keys(day).filter(key => key !== 'day')
-        console.log(`Gün ${day.day}: ${mealKeys.length} öğün - ${mealKeys.join(', ')}`)
-      })
-    }
-    
-    return parsedData
   } catch (error) {
-    console.error('Vertex AI Error:', error)
-    throw new Error(`Vertex AI failed: ${error.message}`)
+    console.error('=== SUPABASE EDGE FUNCTION HATASI ===')
+    console.error('Error type:', typeof error)
+    console.error('Error stack:', error.stack)
+    console.error('Full error object:', error)
+    console.error('Error message:', error.message)
+    
+    return new Response(JSON.stringify({ 
+      error: 'Meal plan generation failed', 
+      details: error.message 
+    }), {
+      status: 500,
+      headers: corsHeaders
+    })
   }
 }
 
 async function generateWorkoutPlan(params: any) {
   const {
     age = 25,
-    gender = 'erkek',
+    sex = 'male',
     weight = 70,
     height = 175,
-    activity = 'orta',
-    goal = 'maintain',
-    daysPerWeek = 3,
+    goal = 'muscle_gain',
+    fitnessLevel = 'intermediate',
+    daysPerWeek = 4,
     mode = 'gym',
-    preferredSplit = 'Full Body'
+    splitPreference = 'AUTO'
   } = params
 
-  const fitnessLevel = getFitnessLevel(activity)
-  const userId = 'user_' + Date.now()
+  const actualAge = parseInt(age.toString())
+  const actualWeight = parseFloat(weight.toString())
+  const actualHeight = parseFloat(height.toString())
+  const actualSex = sex.toString()
+  const actualGoal = goal.toString()
+  const actualFitnessLevel = fitnessLevel.toString()
+  const actualDays = parseInt(daysPerWeek.toString())
+  const actualMode = mode.toString()
 
-  const prompt = `Sen dünyanın en iyi antrenman koçusun! Profesyonel bir antrenman programı hazırla.
+  console.log('=== WORKOUT PLAN PARAMETRELERİ ===')
+  console.log('Age:', actualAge)
+  console.log('Sex:', actualSex)
+  console.log('Weight:', actualWeight)
+  console.log('Height:', actualHeight)
+  console.log('Goal:', actualGoal)
+  console.log('Fitness Level:', actualFitnessLevel)
+  console.log('Days:', actualDays)
+  console.log('Mode:', actualMode)
+
+  const prompt = `Sen dünyanın en iyi fitness antrenörüsün! Profesyonel bir antrenör olarak ${actualAge} yaşında, ${actualWeight}kg, ${actualHeight}cm boyunda ${actualSex} için ${actualDays} günlük detaylı antrenman planı oluştur.
       
-KULLANICI BİLGİLERİ:
-- Yaş: ${params.age}
-- Cinsiyet: ${params.gender}
-- Kilo: ${params.weight} kg
-- Boy: ${params.height} cm
-- Fitness Seviyesi: ${fitnessLevel}
-- Hedef: ${goal}
-- Haftalık Antrenman Günü: ${daysPerWeek}
-- Antrenman Yeri: ${params.mode}
-- Tercih Edilen Split: ${preferredSplit || 'Otomatik'}
-
-GÖREVİN:
-1. Kullanıcının hedefine uygun profesyonel antrenman programı hazırla
-2. Fitness seviyesine göre uygun egzersizler seç
-3. Haftalık gün sayısına göre optimal split belirle
-4. Her egzersiz için set, tekrar ve dinlenme süreleri ver
-5. Antrenman süresini belirt
-
-JSON formatında yanıt ver:
-        {
-          "userId": "${userId}",
-          "weekNumber": 1,
-          "splitType": "string",
-          "mode": "${params.mode}",
-          "fitnessLevel": "${fitnessLevel}",
-          "daysPerWeek": ${daysPerWeek},
-          "goal": "${goal}",
-          "preferredSplit": "${preferredSplit}",
-          "workouts": [
-            {
-              "day": 1,
-              "type": "string",
-              "focus": "string",
-              "exercises": [
-                {
-                  "name": "string",
-                  "sets": "number",
-                  "reps": "string",
-                  "rest": "string"
-                }
-              ],
-              "duration": "string",
-              "difficulty": "${fitnessLevel}"
-            }
-          ]
-        }
-        
-        ÖNEMLİ: 
-        - Sadece JSON formatında yanıt ver, başka açıklama yapma!
-        - ${daysPerWeek} gün için farklı egzersiz isimleri ve detaylı set/tekrar bilgileri ver!
-        - Kullanıcının hedefi (${goal}), fitness seviyesi (${fitnessLevel}) ve antrenman yeri (${params.mode}) göre kişiselleştir!
-        - Gerçek egzersiz isimleri kullan (örn: "Bench Press", "Squat", "Deadlift", "Pull-ups")!
-        - Her gün farklı kas gruplarına odaklan!
-        - Set, tekrar ve dinlenme sürelerini fitness seviyesine göre ayarla!`
+      KULLANICI PROFİLİ:
+      - Yaş: ${actualAge}
+      - Cinsiyet: ${actualSex}
+      - Kilo: ${actualWeight} kg
+      - Boy: ${actualHeight} cm
+      - Hedef: ${actualGoal}
+      - Fitness Seviyesi: ${actualFitnessLevel}
+      - Haftalık Antrenman: ${actualDays} gün
+      - Antrenman Yeri: ${actualMode}
+      
+      ÖNEMLİ KURALLAR:
+      1. Kullanıcının hedefine, fitness seviyesine ve antrenman yerine göre kişiselleştir
+      2. Gerçek egzersiz isimleri kullan
+      3. Her gün farklı kas gruplarına odaklan
+      4. Set, tekrar ve dinlenme sürelerini fitness seviyesine göre ayarla
+      5. Farklı egzersiz isimleri kullan - hiçbir örnek egzersiz ismi kullanma
+      6. Detaylı set/tekrar bilgileri ver
+      7. Antrenman yerine göre uygun egzersizler seç (${actualMode})
+      
+      JSON formatında yanıt ver:
+      {
+        "goal": "${actualGoal}",
+        "user_info": {
+          "age": ${actualAge},
+          "sex": "${actualSex}",
+          "weight_kg": ${actualWeight},
+          "height_cm": ${actualHeight},
+          "fitness_level": "${actualFitnessLevel}",
+          "training_days": ${actualDays},
+          "training_location": "${actualMode}"
+        },
+        "days": ${actualDays},
+        "workouts": [
+          {
+            "day": 1,
+            "name": "string",
+            "focus": "string",
+            "exercises": [
+              {
+                "name": "string",
+                "sets": "number",
+                "reps": "string",
+                "rest": "string",
+                "notes": "string"
+              }
+            ]
+          }
+        ]
+      }`
 
   try {
-    console.log('=== VERTEX AI WORKOUT ÇAĞRISI BAŞLADI ===')
-    // Vertex AI endpoint
-    const vertexAIEndpoint = `https://${LOCATION}-aiplatform.googleapis.com/v1/projects/${PROJECT_ID}/locations/${LOCATION}/publishers/google/models/${MODEL_ID}:generateContent`
+    console.log('=== GEMINI API ÇAĞRISI BAŞLADI ===')
     
-    const accessToken = await getAccessToken();
-    console.log('Access token generated:', !!accessToken);
-    console.log('Vertex AI endpoint:', vertexAIEndpoint);
+    // Gemini API endpoint
+    const apiKey = "AIzaSyDBKGbsPR3LRs7dRYqkn4_QXEMmUvv8wE0"
+    const geminiEndpoint = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-exp:generateContent?key=${apiKey}`
     
-    const response = await fetch(vertexAIEndpoint, {
-        method: 'POST',
-        headers: {
-        'Authorization': `Bearer ${accessToken}`,
+    console.log('Gemini endpoint:', geminiEndpoint)
+    console.log('Prompt length:', prompt.length)
+    console.log('Prompt preview:', prompt.substring(0, 200) + '...')
+    
+    const response = await fetch(geminiEndpoint, {
+      method: 'POST',
+      headers: {
         'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
+      },
+      body: JSON.stringify({
         contents: [{
           role: 'user',
           parts: [{
@@ -504,45 +387,75 @@ JSON formatında yanıt ver:
       })
     })
 
-    console.log('Response status:', response.status);
-    console.log('Response headers:', Object.fromEntries(response.headers.entries()));
+    console.log('Response status:', response.status)
+    console.log('Response headers:', Object.fromEntries(response.headers.entries()))
 
     if (!response.ok) {
-      const errorText = await response.text();
-      console.error('Vertex AI error response:', errorText);
-      throw new Error(`Vertex AI API failed: ${response.status} ${response.statusText} - ${errorText}`)
+      const errorText = await response.text()
+      console.error('Gemini API error response:', errorText)
+      throw new Error(`Gemini API failed: ${response.status} ${response.statusText} - ${errorText}`)
     }
 
     const data = await response.json()
-    console.log('Vertex AI response data:', JSON.stringify(data, null, 2));
+    console.log('Gemini API response received')
     
-    const geminiText = data.candidates[0].content.parts[0].text
-    
-    console.log('Vertex AI raw workout response:', geminiText)
-    
-    // JSON'u parse et
-    const jsonMatch = geminiText.match(/\{[\s\S]*\}/)
-    if (!jsonMatch) {
-      throw new Error('No JSON found in Vertex AI response')
+    if (data.candidates && data.candidates[0] && data.candidates[0].content) {
+      const generatedText = data.candidates[0].content.parts[0].text
+      console.log('Generated text length:', generatedText.length)
+      console.log('Generated text preview:', generatedText.substring(0, 200) + '...')
+      
+      try {
+        // JSON'u parse et
+        const jsonMatch = generatedText.match(/\{[\s\S]*\}/)
+        if (!jsonMatch) {
+          throw new Error('No JSON found in Gemini response')
+        }
+        
+        const workoutPlan = JSON.parse(jsonMatch[0])
+        console.log('✅ Workout plan JSON parsed successfully')
+        
+        // Debug: Tüm workout planını logla
+        console.log('=== GEMINI WORKOUT PLAN DEBUG ===')
+        console.log('Full workout plan:', JSON.stringify(workoutPlan, null, 2))
+        
+        if (workoutPlan.workouts && workoutPlan.workouts.length > 0) {
+          console.log('=== WORKOUT KONTROLÜ ===')
+          workoutPlan.workouts.forEach((workout: any, index: number) => {
+            console.log(`Gün ${workout.day}: ${workout.name} - ${workout.exercises?.length || 0} egzersiz`)
+            if (workout.exercises) {
+              workout.exercises.forEach((exercise: any, exIndex: number) => {
+                console.log(`  ${exIndex + 1}. ${exercise.name} - ${exercise.sets} set x ${exercise.reps} tekrar`)
+              })
+            }
+          })
+        }
+        
+        return new Response(JSON.stringify(workoutPlan), {
+          status: 200,
+          headers: corsHeaders
+        })
+      } catch (parseError) {
+        console.error('❌ JSON parse error:', parseError)
+        console.log('Raw generated text:', generatedText)
+        throw new Error(`JSON parse error: ${parseError.message}`)
+      }
+    } else {
+      console.error('❌ Invalid response structure:', data)
+      throw new Error('Invalid response structure from Gemini API')
     }
-    
-    const parsedData = JSON.parse(jsonMatch[0])
-    console.log('Parsed Vertex AI workout data:', JSON.stringify(parsedData, null, 2))
-    
-    return parsedData
   } catch (error) {
-    console.error('Vertex AI Workout Error:', error)
-    throw new Error(`Vertex AI failed: ${error.message}`)
-  }
-}
-
-function getFitnessLevel(activity: string): string {
-  switch (activity) {
-    case 'sedanter': return 'Başlangıç'
-    case 'hafif': return 'Başlangıç'
-    case 'orta': return 'Orta'
-    case 'aktif': return 'İleri'
-    case 'çok_aktif': return 'İleri'
-    default: return 'Orta'
+    console.error('=== SUPABASE EDGE FUNCTION HATASI ===')
+    console.error('Error type:', typeof error)
+    console.error('Error stack:', error.stack)
+    console.error('Full error object:', error)
+    console.error('Error message:', error.message)
+    
+    return new Response(JSON.stringify({ 
+      error: 'Workout plan generation failed', 
+      details: error.message 
+    }), {
+      status: 500,
+      headers: corsHeaders
+    })
   }
 }

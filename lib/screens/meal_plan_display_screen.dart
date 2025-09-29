@@ -317,18 +317,15 @@ class _MealPlanViewState extends State<_MealPlanView> {
       orElse: () => widget.plan.dailyPlan.first,
     );
 
-    return SingleChildScrollView(
+    return ListView(
       padding: const EdgeInsets.all(16.0),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          // Günlük Özet
-          _buildDailySummary(selectedDayPlan),
-          const SizedBox(height: 16),
-          // Öğün Detayları
-          ...selectedDayPlan.meals.map((meal) => _buildMealCard(meal)),
-        ],
-      ),
+      children: [
+        // Günlük Özet
+        _buildDailySummary(selectedDayPlan),
+        const SizedBox(height: 16),
+        // Öğün Detayları
+        ...selectedDayPlan.meals.map((meal) => _buildMealCard(meal)),
+      ],
     );
   }
 
@@ -412,6 +409,38 @@ class _MealPlanViewState extends State<_MealPlanView> {
               ),
             ),
             const SizedBox(height: 8),
+            // Yemek tarifi
+            if (meal.recipe != null && meal.recipe!.isNotEmpty)
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.all(12.0),
+                margin: const EdgeInsets.only(bottom: 8.0),
+                decoration: BoxDecoration(
+                  color: Colors.grey[50],
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(color: Colors.grey[300]!),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text(
+                      'Tarif:',
+                      style: TextStyle(
+                        fontWeight: FontWeight.bold,
+                        color: Colors.green,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      meal.recipe!,
+                      style: const TextStyle(fontSize: 12),
+                      maxLines: 10,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ],
+                ),
+              ),
+            // Yemek listesi
             ...meal.items.map((item) => Padding(
                   padding: const EdgeInsets.only(bottom: 4.0),
                   child: Text('- ${item.name} (${item.quantity} ${item.unit})'),

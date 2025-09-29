@@ -85,7 +85,8 @@ class DailyPlan {
             'carbs': map['breakfast']['carbs'] ?? 0,
             'fat': map['breakfast']['fat'] ?? 0,
           }
-        ]
+        ],
+        'recipe': map['breakfast']['recipe']
       }));
     }
 
@@ -103,7 +104,8 @@ class DailyPlan {
             'carbs': map['snack1']['carbs'] ?? 0,
             'fat': map['snack1']['fat'] ?? 0,
           }
-        ]
+        ],
+        'recipe': map['snack1']['recipe']
       }));
     }
 
@@ -121,7 +123,8 @@ class DailyPlan {
             'carbs': map['lunch']['carbs'] ?? 0,
             'fat': map['lunch']['fat'] ?? 0,
           }
-        ]
+        ],
+        'recipe': map['lunch']['recipe']
       }));
     }
 
@@ -139,7 +142,8 @@ class DailyPlan {
             'carbs': map['snack2']['carbs'] ?? 0,
             'fat': map['snack2']['fat'] ?? 0,
           }
-        ]
+        ],
+        'recipe': map['snack2']['recipe']
       }));
     }
 
@@ -157,7 +161,8 @@ class DailyPlan {
             'carbs': map['dinner']['carbs'] ?? 0,
             'fat': map['dinner']['fat'] ?? 0,
           }
-        ]
+        ],
+        'recipe': map['dinner']['recipe']
       }));
     }
 
@@ -173,8 +178,9 @@ class Meal {
   final String name;
   final List<Ingredient> items;
   final String? notes;
+  final String? recipe;
 
-  Meal({required this.name, required this.items, this.notes});
+  Meal({required this.name, required this.items, this.notes, this.recipe});
 
   int get totalCalories => items.fold(0, (sum, item) => sum + item.calories);
   int get totalProtein => items.fold(0, (sum, item) => sum + item.protein);
@@ -193,6 +199,7 @@ class Meal {
           .map((itemJson) => Ingredient.fromJson(itemJson))
           .toList(),
       notes: map['notes']?.toString(),
+      recipe: map['recipe']?.toString(),
     );
   }
 }
