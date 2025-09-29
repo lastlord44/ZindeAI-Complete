@@ -69,8 +69,8 @@ class _WorkoutPlanDisplayScreenState extends State<WorkoutPlanDisplayScreen> {
     final dayData = _getCurrentDayData();
 
     if (workoutPlan == null || dayData == null) {
-      return Scaffold(
-        appBar: AppBar(
+    return Scaffold(
+      appBar: AppBar(
           title: Text('Antrenman Planı'),
         ),
         body: Center(
@@ -106,21 +106,21 @@ class _WorkoutPlanDisplayScreenState extends State<WorkoutPlanDisplayScreen> {
                 begin: Alignment.topCenter,
                 end: Alignment.bottomCenter,
               ),
-            ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
                   workoutPlan['planName'] ?? 'Antrenman Programı',
                   style: TextStyle(
-                    fontSize: 24,
-                    fontWeight: FontWeight.bold,
-                    color: Colors.white,
-                  ),
-                ),
+              fontSize: 24,
+              fontWeight: FontWeight.bold,
+              color: Colors.white,
+            ),
+          ),
                 SizedBox(height: 8),
-                Row(
-                  children: [
+          Row(
+            children: [
                     Icon(Icons.calendar_today, size: 16, color: Colors.white70),
                     SizedBox(width: 4),
                     Text(
@@ -192,10 +192,10 @@ class _WorkoutPlanDisplayScreenState extends State<WorkoutPlanDisplayScreen> {
             child: Container(
               width: 100,
               margin: EdgeInsets.only(right: 12),
-              decoration: BoxDecoration(
+      decoration: BoxDecoration(
                 color:
                     isSelected ? Theme.of(context).primaryColor : Colors.white,
-                borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(12),
                 border: Border.all(
                   color: isSelected
                       ? Theme.of(context).primaryColor
@@ -236,8 +236,8 @@ class _WorkoutPlanDisplayScreenState extends State<WorkoutPlanDisplayScreen> {
                   ],
                 ),
               ),
-            ),
-          );
+                ),
+              );
         },
       ),
     );
@@ -434,7 +434,7 @@ class _WorkoutPlanDisplayScreenState extends State<WorkoutPlanDisplayScreen> {
 
   Widget _buildDetailSection(String title, IconData icon, Widget content) {
     return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
+          crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Row(
           children: [
@@ -503,8 +503,8 @@ class _WorkoutPlanDisplayScreenState extends State<WorkoutPlanDisplayScreen> {
     return Padding(
       padding: EdgeInsets.symmetric(vertical: 4),
       child: Row(
-        children: [
-          Text(
+      children: [
+        Text(
             '$label: ',
             style: TextStyle(fontWeight: FontWeight.bold),
           ),
