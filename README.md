@@ -7,13 +7,13 @@ ZindeAI, yapay zeka destekli kişiselleştirilmiş fitness ve beslenme planları
 ## ✨ Özellikler
 
 ### 🏋️ Antrenman Planları
-- **AI Destekli Plan Oluşturma**: Gemini AI modeli ile kişiselleştirilmiş antrenman planları
+- **AI Destekli Plan Oluşturma**: Google Gemini 1.5 Flash modeli ile kişiselleştirilmiş antrenman planları
 - **Split Mantığı**: Gün sayısına göre otomatik split seçimi (Full Body, Upper/Lower, Push/Pull/Legs)
 - **Egzersiz Veritabanı**: Onaylı egzersiz listesi ile güvenli planlar
 - **Detaylı Bilgiler**: Set, tekrar, dinlenme süreleri ve RPE değerleri
 
 ### 🍎 Beslenme Planları
-- **AI Destekli Beslenme**: Gemini modeli ile detaylı beslenme planları
+- **AI Destekli Beslenme**: Google Gemini 1.5 Flash modeli ile detaylı beslenme planları
 - **Makro Hesaplama**: Kalori, protein, karbonhidrat, yağ hesaplamaları
 - **Malzeme Detayları**: Her öğün için detaylı malzeme listesi
 - **Haftalık Planlar**: 7 günlük kapsamlı beslenme programları
@@ -41,8 +41,8 @@ ZindeAI, yapay zeka destekli kişiselleştirilmiş fitness ve beslenme planları
 - **Storage**: Supabase Storage
 
 ### AI Entegrasyonu
-- **Model**: Google Gemini 2.0 Flash
-- **Platform**: Google Vertex AI
+- **Model**: Google Gemini 1.5 Flash
+- **Platform**: Google AI Studio
 - **Her iki plan türü için (antrenman ve beslenme)**
 
 ## 🚀 Kurulum
