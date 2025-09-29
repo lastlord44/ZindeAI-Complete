@@ -34,18 +34,16 @@ ZindeAI, yapay zeka destekli kişiselleştirilmiş fitness ve beslenme planları
 - **Media**: Cached Network Image, Video Player
 - **Utilities**: Flutter Toast, Shimmer, URL Launcher, Shared Preferences
 
-### Backend (Supabase Edge Functions)
-- **Runtime**: Deno TypeScript
-- **AI Integration**: Google Vertex AI (Gemini 2.0 Flash)
-- **Authentication**: API Key based
-- **CORS**: Cross-origin support
+### Backend (Supabase)
+- **Database**: PostgreSQL
+- **Edge Functions**: Deno TypeScript
+- **Authentication**: Supabase Auth
+- **Storage**: Supabase Storage
 
 ### AI Entegrasyonu
 - **Model**: Google Gemini 2.0 Flash
 - **Platform**: Google Vertex AI
-- **Location**: us-central1
-- **Project**: august-journey-473119-t2
-- **Authentication**: Service Account JWT
+- **Her iki plan türü için (antrenman ve beslenme)**
 
 ## 🚀 Kurulum
 
@@ -76,7 +74,6 @@ npx supabase start
 4. **Environment değişkenlerini ayarlayın**
 ```bash
 # supabase/.env dosyasına API anahtarlarını ekleyin
-GEMINI_API_KEY=your_gemini_key
 GEMINI_API_KEY=your_gemini_key
 ```
 
