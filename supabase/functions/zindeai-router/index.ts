@@ -7,43 +7,54 @@ const corsHeaders = {
 }
 
 serve(async (req) => {
-  console.log('=== SUPABASE EDGE FUNCTION BAŞLADI ===')
-  console.log('Request method:', req.method)
-  console.log('Request URL:', req.url)
-
-  // CORS
+  // CORS handling
   if (req.method === 'OPTIONS') {
     return new Response('ok', { headers: corsHeaders })
   }
 
   try {
-    const body = await req.json()
-    console.log('Request body:', body)
+    const { requestType, ...data } = await req.json()
     
-    const { planType, calories, goal, diet, daysPerWeek, preferences, age, sex, weight, height, activity } = body
-
-    if (planType === 'meal') {
-      return await generateMealPlan(body)
-    } else if (planType === 'workout') {
-      return await generateWorkoutPlan(body)
+    let result;
+    
+    if (data.planType === 'meal') {
+      result = await generateMealPlan(data)
+    } else if (data.planType === 'workout') {
+      result = await generateWorkoutPlan(data)
     } else {
       throw new Error('Invalid plan type')
     }
-
-  } catch (error) {
-    console.error('=== SUPABASE EDGE FUNCTION HATASI ===')
-    console.error('Error type:', typeof error)
-    console.error('Error stack:', error.stack)
-    console.error('Full error object:', error)
-    console.error('Error message:', error.message)
     
-    return new Response(JSON.stringify({ 
-      error: 'Request failed', 
-      details: error.message 
-    }), {
-      status: 500,
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' }
-    })
+    // KRITIK: Her zaman JSON object döndür
+    const response = typeof result === 'string' 
+      ? { data: JSON.parse(result) }  // String ise parse et
+      : { data: result }               // Zaten object ise wrap et
+    
+    return new Response(
+      JSON.stringify(response),
+      { 
+        headers: { 
+          ...corsHeaders,
+          'Content-Type': 'application/json; charset=utf-8'  // Doğru content-type
+        },
+        status: 200
+      }
+    )
+  } catch (error) {
+    // Hata durumunda da JSON döndür
+    return new Response(
+      JSON.stringify({ 
+        error: error.message,
+        details: error.toString()
+      }),
+      { 
+        headers: { 
+          ...corsHeaders,
+          'Content-Type': 'application/json; charset=utf-8'
+        },
+        status: 500
+      }
+    )
   }
 })
 
@@ -241,10 +252,7 @@ async function generateMealPlan(params: any) {
           })
         }
         
-        return new Response(JSON.stringify(mealPlan), {
-          status: 200,
-          headers: corsHeaders
-        })
+        return mealPlan
       } catch (parseError) {
         console.error('❌ JSON parse error:', parseError)
         console.log('Raw generated text:', generatedText)
@@ -261,13 +269,7 @@ async function generateMealPlan(params: any) {
     console.error('Full error object:', error)
     console.error('Error message:', error.message)
     
-    return new Response(JSON.stringify({ 
-      error: 'Meal plan generation failed', 
-      details: error.message 
-    }), {
-      status: 500,
-      headers: corsHeaders
-    })
+    throw error
   }
 }
 
@@ -430,10 +432,7 @@ async function generateWorkoutPlan(params: any) {
           })
         }
         
-        return new Response(JSON.stringify(workoutPlan), {
-          status: 200,
-          headers: corsHeaders
-        })
+        return workoutPlan
       } catch (parseError) {
         console.error('❌ JSON parse error:', parseError)
         console.log('Raw generated text:', generatedText)
@@ -450,12 +449,6 @@ async function generateWorkoutPlan(params: any) {
     console.error('Full error object:', error)
     console.error('Error message:', error.message)
     
-    return new Response(JSON.stringify({ 
-      error: 'Workout plan generation failed', 
-      details: error.message 
-    }), {
-      status: 500,
-      headers: corsHeaders
-    })
+    throw error
   }
 }

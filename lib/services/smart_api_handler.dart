@@ -201,36 +201,34 @@ class SmartApiHandler {
               'hasData': response.data.containsKey('data'),
             });
 
-        // Backend'den gelen response formatını kontrol et ve data'yı al
-        Map<String, dynamic> actualMealData;
+        // TIP KONTROLÜ VE DÖNÜŞTÜRME
+        dynamic responseData = response.data;
 
-        // Response data'yı güvenli şekilde parse et
-        if (response.data is Map<String, dynamic>) {
-          actualMealData = response.data as Map<String, dynamic>;
-          Logger.debug('Map format kullanılıyor',
-              tag: 'SmartApiHandler',
-              data: {
-                'dataKeys': actualMealData.keys.toList(),
-              });
-        } else if (response.data is String) {
-          // String ise JSON parse et
-          actualMealData =
-              Map<String, dynamic>.from(jsonDecode(response.data as String));
-          Logger.debug('String format JSON parse edildi',
-              tag: 'SmartApiHandler',
-              data: {
-                'dataKeys': actualMealData.keys.toList(),
-              });
-        } else {
-          // Diğer formatlar için toString() kullan
-          final dataString = response.data.toString();
-          actualMealData = Map<String, dynamic>.from(jsonDecode(dataString));
-          Logger.debug('ToString format JSON parse edildi',
-              tag: 'SmartApiHandler',
-              data: {
-                'dataKeys': actualMealData.keys.toList(),
-              });
+        // 1. String ise JSON parse et
+        if (responseData is String) {
+          try {
+            responseData = jsonDecode(responseData);
+            print('✅ String response JSON\'a parse edildi');
+          } catch (e) {
+            print('❌ JSON parse hatası: $e');
+            throw Exception('Invalid JSON response: $responseData');
+          }
         }
+
+        // 2. Map değilse hata fırlat
+        if (responseData is! Map<String, dynamic>) {
+          print('❌ Response Map değil: ${responseData.runtimeType}');
+
+          // Eğer data field'ı varsa onu kullan
+          if (responseData is Map && responseData.containsKey('data')) {
+            responseData = responseData['data'];
+          } else {
+            throw Exception('Invalid response format');
+          }
+        }
+
+        Map<String, dynamic> actualMealData =
+            responseData as Map<String, dynamic>;
 
         Logger.debug('Meal plan data parse ediliyor',
             tag: 'SmartApiHandler',

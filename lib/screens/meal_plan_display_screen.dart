@@ -409,7 +409,7 @@ class _MealPlanViewState extends State<_MealPlanView> {
               ),
             ),
             const SizedBox(height: 8),
-            // Yemek tarifi
+            // Yemek tarifi - Collapsible
             if (meal.recipe != null && meal.recipe!.isNotEmpty)
               Container(
                 width: double.infinity,
@@ -424,35 +424,53 @@ class _MealPlanViewState extends State<_MealPlanView> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     const Text(
-                      'Tarif:',
+                      '👨‍🍳 Tarif:',
                       style: TextStyle(
                         fontWeight: FontWeight.bold,
                         color: Colors.green,
                       ),
                     ),
-                    const SizedBox(height: 4),
-                    Text(
-                      meal.recipe!,
-                      style: const TextStyle(fontSize: 12),
-                      maxLines: 10,
-                      overflow: TextOverflow.ellipsis,
+                    const SizedBox(height: 8),
+                    Container(
+                      constraints: BoxConstraints(maxHeight: 200), // Max height
+                      child: SingleChildScrollView(
+                        child: Text(
+                          meal.recipe!,
+                          style: const TextStyle(fontSize: 14),
+                        ),
+                      ),
                     ),
                   ],
                 ),
               ),
-            // Yemek listesi
-            ...meal.items.map((item) => Padding(
-                  padding: const EdgeInsets.only(bottom: 4.0),
-                  child: Text('- ${item.name} (${item.quantity} ${item.unit})'),
-                )),
+            // Malzemeler
+            Text('📝 Malzemeler:',
+                style: TextStyle(fontWeight: FontWeight.bold)),
+            SizedBox(height: 8),
+            Container(
+              constraints: BoxConstraints(maxHeight: 150), // Max height
+              child: SingleChildScrollView(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: meal.items
+                      .map((item) => Padding(
+                            padding: const EdgeInsets.only(bottom: 4.0),
+                            child: Text(
+                                '- ${item.name} (${item.quantity} ${item.unit})'),
+                          ))
+                      .toList(),
+                ),
+              ),
+            ),
             const SizedBox(height: 8),
+            // Makrolar
+            SizedBox(height: 16),
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceAround,
               children: [
-                _buildMealStat('Kalori', '${meal.totalCalories}'),
-                _buildMealStat('Protein', '${meal.totalProtein}g'),
-                _buildMealStat('Karbonhidrat', '${meal.totalCarbs}g'),
-                _buildMealStat('Yağ', '${meal.totalFat}g'),
+                _buildMacroChip('Protein', meal.totalProtein),
+                _buildMacroChip('Karb', meal.totalCarbs),
+                _buildMacroChip('Yağ', meal.totalFat),
               ],
             ),
             const SizedBox(height: 12),
@@ -504,25 +522,10 @@ class _MealPlanViewState extends State<_MealPlanView> {
     );
   }
 
-  Widget _buildMealStat(String label, String value) {
-    return Column(
-      children: [
-        Text(
-          value,
-          style: const TextStyle(
-            fontSize: 14,
-            fontWeight: FontWeight.bold,
-            color: Colors.green,
-          ),
-        ),
-        Text(
-          label,
-          style: TextStyle(
-            fontSize: 10,
-            color: Colors.grey[600],
-          ),
-        ),
-      ],
+  Widget _buildMacroChip(String label, dynamic value) {
+    return Chip(
+      label: Text('$label: ${value ?? 0}g'),
+      backgroundColor: Colors.blue.shade50,
     );
   }
 }
