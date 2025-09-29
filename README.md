@@ -201,11 +201,48 @@ supabase/
 3. **UI Layout:** Overflow için daha iyi layout çözümü ✅
 4. **Error Handling:** JSON parsing için daha robust error handling ✅
 
-### 🔴 Yeni Acil Çözüm Gerekenler
+### 🔴 Yeni Acil Çözüm Gerekenler ✅ ÇÖZÜLDÜ
 1. **Kas Kütlesi Hedefi:** Profile screen'deki hedef seçimi prompt'a dahil edilmeli
 2. **Egzersiz Detayları:** Workout prompt'ına beklenme süresi, form, dikkat noktaları eklenmeli
 3. **Protein Tutarlılığı:** Meal prompt'ında protein hedefi daha spesifik belirtilmeli
 4. **Prompt Güncellemeleri:** Tüm prompt'lar kullanıcı hedeflerini daha iyi yansıtmalı
+
+## 🚨 Runtime Hatalar (Test Sonrası Tespit Edilen)
+
+### 1. Öğün Takibi "The method '[]' was called on null" Hatası
+- **Sorun:** MealTrackerScreen'de `widget.mealPlan['days'][dayIndex]['meals']` null dönüyor
+- **Etki:** Öğün takibi ekranı açılmıyor, uygulama çöküyor
+- **Hata:** `NoSuchMethodError: The method '[]' was called on null`
+- **Çözüm:** MealPlan JSON formatı düzeltilmeli, null kontrolleri eklenmeli
+
+### 2. Alışveriş Listesi "forEach" Hatası
+- **Sorun:** ShoppingListScreen'de `widget.mealPlan['days']` null
+- **Etki:** Alışveriş listesi oluşturulamıyor
+- **Hata:** `NoSuchMethodError: The method 'forEach' was called on null`
+- **Çözüm:** MealPlan veri yapısı kontrol edilmeli
+
+### 3. Öğün Takip Butonları Çalışmıyor
+- **Sorun:** "Yedim/Yemedim" butonları tıklandığında görsel değişiklik olmuyor
+- **Etki:** Kullanıcı öğün durumunu takip edemiyor
+- **Beklenen:** Yeşil/kırmızı renk değişimi, çizgi çekme, buton kilitleme
+- **Çözüm:** State management ve UI güncellemeleri düzeltilmeli
+
+### 4. Antrenman Planı Detayları Hala Eksik
+- **Sorun:** Dinlenme süreleri "60-90 saniye" gibi belirsiz, doğru form bilgileri yok
+- **Etki:** Kullanıcılar egzersizleri yanlış yapabilir
+- **Beklenen:** Net dinlenme süreleri, detaylı form ipuçları, RPE değerleri
+- **Çözüm:** Workout prompt'ı daha detaylandırılmalı
+
+### 5. Antrenman Günleri Yanlış Dağıtılıyor
+- **Sorun:** 5 gün isteyen kullanıcıya "Bacak + Omuz" gibi yanlış kombinasyonlar veriliyor
+- **Etki:** Profesyonel olmayan antrenman programı
+- **Beklenen:** Push/Pull/Legs veya Upper/Lower gibi mantıklı split'ler
+- **Çözüm:** Workout prompt'ında split mantığı netleştirilmeli
+
+### 6. UI Overflow Hatası Devam Ediyor
+- **Sorun:** `RenderFlex overflowed by 128 pixels on the bottom`
+- **Etki:** Ekran düzgün görüntülenmiyor
+- **Çözüm:** Responsive layout düzeltmeleri yapılmalı
 
 ## 🤝 Katkıda Bulunma
 
