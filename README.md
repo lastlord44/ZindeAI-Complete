@@ -30,18 +30,22 @@ ZindeAI, yapay zeka destekli kişiselleştirilmiş fitness ve beslenme planları
 - **Framework**: Flutter 3.x
 - **State Management**: Provider
 - **HTTP Client**: Dio
-- **Database**: Supabase Flutter
+- **UI Components**: Material Design
+- **Media**: Cached Network Image, Video Player
+- **Utilities**: Flutter Toast, Shimmer, URL Launcher, Shared Preferences
 
-### Backend (Supabase)
-- **Database**: PostgreSQL
-- **Edge Functions**: Deno TypeScript
-- **Authentication**: Supabase Auth
-- **Storage**: Supabase Storage
+### Backend (Supabase Edge Functions)
+- **Runtime**: Deno TypeScript
+- **AI Integration**: Google Vertex AI (Gemini 2.0 Flash)
+- **Authentication**: API Key based
+- **CORS**: Cross-origin support
 
 ### AI Entegrasyonu
-- **Antrenman Planları**: Gemini 1.5 Flash
-- **Beslenme Planları**: Google Gemini 1.5 Flash
-- **JSON Temizleme**: Backend'de otomatik format düzeltme
+- **Model**: Google Gemini 2.0 Flash
+- **Platform**: Google Vertex AI
+- **Location**: us-central1
+- **Project**: august-journey-473119-t2
+- **Authentication**: Service Account JWT
 
 ## 🚀 Kurulum
 
@@ -106,15 +110,18 @@ supabase/
 ```
 
 ### API Endpoints
-- `POST /zindeai-router` - AI plan oluşturma
-  - `requestType: "plan"` - Beslenme planı
-  - `requestType: "antrenman"` - Antrenman planı
+- `POST /functions/v1/zindeai-router` - AI plan oluşturma
+  - `planType: "meal"` - Beslenme planı
+  - `planType: "workout"` - Antrenman planı
 
-## 🐛 Bilinen Sorunlar
+## ✅ Çözülen Sorunlar
 
-- [ ] GIF'lerin yüklenmemesi
-- [ ] Profil ekranında yazı boyutu sorunları
-- [ ] Offline mod desteği eksik
+- [x] 401 Authentication Error - Supabase Edge Function auth gereksinimleri kaldırıldı
+- [x] Meal Plan Fixed Examples - "Balık akşamı" gibi sabit örnekler kaldırıldı
+- [x] Workout Plan Fixed Examples - Sabit egzersiz örnekleri kaldırıldı
+- [x] Detailed Recipe Requirements - Gramaj, pişirme yöntemi, süre bilgileri eklendi
+- [x] UI Improvements - Meal consumption tracking, workout day selection düzeltildi
+- [x] Security - Service account credentials environment variables'a taşındı
 
 ## 🤝 Katkıda Bulunma
 
