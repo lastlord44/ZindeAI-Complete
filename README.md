@@ -189,25 +189,44 @@ supabase/
 3. **Offline Mode** - Local data persistence
 4. **Performance** - API response caching
 
-## 📋 SON DURUM RAPORU
+## 📋 SON DURUM RAPORU (1 Ekim 2025)
 
 ### ✅ BAŞARILI DEĞİŞİKLİKLER
 - **Edge Function:** Profesyonel diyetisyen ve antrenör prompt'ları eklendi
-- **README:** Groq/Llama referansları kaldırıldı, sadece Gemini kullanılıyor
-- **GitHub:** Tüm değişiklikler push edildi
+- **Validation:** Kalori/protein/yasak besin kontrolü eklendi
+- **UI:** Bottom overflow hataları düzeltildi (SingleChildScrollView)
+- **Prompt:** Temperature 0.1'e düşürüldü, System Instruction eklendi
+- **Güvenlik:** Node.js bağımlılıkları kaldırıldı, sadece Supabase kullanılıyor
 
-### 🔴 MEVCUT DURUM
-- **Uygulama:** Chrome'da çalışıyor ama kritik hatalar var
-- **Kas Kütlesi Checkbox:** İlk görünüyor, sonra kayboluyor
-- **Antrenman Planı:** "Veri bulunamadı" hatası
-- **Beslenme Planı:** TypeError ile çöküyor
-- **Edge Function:** 500 hatası veriyor
+### 🔴 BİLİNEN SORUNLAR
 
-### 🎯 ÖNCELİK SIRASI
-1. **Kas Kütlesi Checkbox State Fix** (En kritik)
-2. **Edge Function API Format Fix** 
-3. **Meal Plan Display TypeError Fix**
-4. **Workout Plan Data Parse Fix**
+#### 1. 🚨 KRİTİK: AI Kalori/Protein Hedeflerini Tutturmuyor
+**Sorun:** Kullanıcı 2963 kcal için plan istese bile AI 1810 kcal öneriyor
+**Sebep:** Gemini AI prompt'taki hedefleri göz ardı ediyor
+**Durum:** Validation eklenmiş ama AI hala düşük değerler veriyor
+**Çözüm Denemesi:** 
+- ✅ Temperature 0.1'e düşürüldü
+- ✅ System Instruction eklendi
+- ✅ Prompt başına net uyarılar eklendi
+- ✅ Validation kontrolü eklendi (hatalı planları reddeder)
+
+#### 2. 🚨 KRİTİK: Yasak Besinler Öneriliyor
+**Sorun:** AI simit, gözleme, börek gibi yasak besinler öneriyor
+**Sebep:** Prompt'ta yasak listesi yeterince vurgulanmamış olabilir
+**Durum:** Validation ile yakalanıyor ama AI hala önermeye çalışıyor
+**Çözüm:** Yasak besin listesi tek tek eklendi, validation kontrolü aktif
+
+#### 3. 🔴 ORTA: Antrenman Rest Günü Problemi
+**Sorun:** 5 gün seçildiğinde AI "Perşembe Rest" günü ekliyor
+**Sebep:** AI gün sayısını yanlış yorumluyor
+**Durum:** Validation eklendi, Rest günü bulunursa plan reddediliyor
+**Çözüm:** Prompt'a "Rest günü EKLEME!" talimatı eklendi
+
+### 🎯 ÖNCELİK SIRASI (Sonraki Adımlar)
+1. **Retry Mekanizması:** Validation başarısız olursa yeniden deneme
+2. **Farklı AI Model:** Gemini-Pro veya Claude denemesi
+3. **Manuel Override:** Kullanıcı manuel kalori/protein girebilsin
+4. **Better Prompting:** Few-shot learning örnekleri ekle
 
 ## 🤝 Katkıda Bulunma
 

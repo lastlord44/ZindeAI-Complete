@@ -1,12 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'dart:convert';
 import 'meal_tracker_screen.dart';
 import 'shopping_list_screen.dart';
 
 class MealPlanDisplayScreen extends StatefulWidget {
   final Map<String, dynamic> mealPlan;
+  final Map<String, dynamic>? userProfile;
 
-  MealPlanDisplayScreen({required this.mealPlan});
+  MealPlanDisplayScreen({required this.mealPlan, this.userProfile});
 
   @override
   _MealPlanDisplayScreenState createState() => _MealPlanDisplayScreenState();
@@ -20,6 +22,17 @@ class _MealPlanDisplayScreenState extends State<MealPlanDisplayScreen> {
   void initState() {
     super.initState();
     loadMealStatus();
+    _savePlan();
+  }
+
+  // Planı kaydet
+  Future<void> _savePlan() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setString('meal_plan', jsonEncode(widget.mealPlan));
+    } catch (e) {
+      print('Plan kaydedilemedi: $e');
+    }
   }
 
   void loadMealStatus() async {
@@ -72,6 +85,10 @@ class _MealPlanDisplayScreenState extends State<MealPlanDisplayScreen> {
     final meals = currentDay['meals'] ?? {};
     final dayName = currentDay['dayName'] ?? 'Gün ${currentDay['day']}';
 
+    // Bugünün gününü al (0 = Pazartesi)
+    final today = DateTime.now();
+    final todayIndex = (today.weekday - 1) % 7; // 0=Pazartesi, 6=Pazar
+
     return Scaffold(
       appBar: AppBar(
         title: Text('7 Günlük Beslenme Planı'),
@@ -105,15 +122,49 @@ class _MealPlanDisplayScreenState extends State<MealPlanDisplayScreen> {
       ),
       body: Column(
         children: [
+          // Profil özeti
+          if (widget.userProfile != null)
+            Container(
+              padding: EdgeInsets.all(12),
+              color: Colors.purple[50],
+              child: SingleChildScrollView(
+                scrollDirection: Axis.horizontal,
+                child: Row(
+                  children: [
+                    _buildProfileChip(
+                        Icons.flag,
+                        widget.userProfile!['primary_goal'] ?? 'Hedef',
+                        Colors.purple),
+                    SizedBox(width: 8),
+                    _buildProfileChip(
+                        Icons.local_fire_department,
+                        '${widget.userProfile!['target_calories'] ?? 0} kcal',
+                        Colors.orange),
+                    SizedBox(width: 8),
+                    _buildProfileChip(Icons.monitor_weight,
+                        '${widget.userProfile!['weight'] ?? 0}kg', Colors.green),
+                    SizedBox(width: 8),
+                    _buildProfileChip(Icons.restaurant,
+                        widget.userProfile!['diet_type'] ?? 'Diyet', Colors.blue),
+                  ],
+                ),
+              ),
+            ),
+
           // Gün seçici
           Container(
-            height: 60,
+            height: 80,
             child: ListView.builder(
               scrollDirection: Axis.horizontal,
               itemCount: days.length,
               itemBuilder: (context, index) {
                 final day = days[index];
                 final isSelected = index == selectedDayIndex;
+                final isToday = index == todayIndex;
+
+                // Tarihi hesapla (bugünden başlayarak)
+                final dayDate = today.add(Duration(days: index - todayIndex));
+                final dateStr = '${dayDate.day}/${dayDate.month}';
 
                 return GestureDetector(
                   onTap: () {
@@ -124,19 +175,58 @@ class _MealPlanDisplayScreenState extends State<MealPlanDisplayScreen> {
                   child: Container(
                     width: 100,
                     margin: EdgeInsets.all(8),
+                    padding: EdgeInsets.symmetric(vertical: 8),
                     decoration: BoxDecoration(
-                      color: isSelected ? Colors.green : Colors.grey[300],
+                      color: isToday
+                          ? (isSelected ? Colors.green[700] : Colors.green[400])
+                          : (isSelected ? Colors.green : Colors.grey[300]),
                       borderRadius: BorderRadius.circular(10),
+                      border: isToday
+                          ? Border.all(color: Colors.green[900]!, width: 2)
+                          : null,
                     ),
-                    child: Center(
-                      child: Text(
-                        day['dayName'] ?? 'Gün ${day['day']}',
-                        style: TextStyle(
-                          color: isSelected ? Colors.white : Colors.black,
-                          fontWeight:
-                              isSelected ? FontWeight.bold : FontWeight.normal,
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Text(
+                          day['dayName'] ?? 'Gün ${day['day']}',
+                          style: TextStyle(
+                            color: (isSelected || isToday)
+                                ? Colors.white
+                                : Colors.black,
+                            fontWeight: FontWeight.bold,
+                            fontSize: 13,
+                          ),
                         ),
-                      ),
+                        SizedBox(height: 4),
+                        Text(
+                          dateStr,
+                          style: TextStyle(
+                            color: (isSelected || isToday)
+                                ? Colors.white70
+                                : Colors.grey[600],
+                            fontSize: 11,
+                          ),
+                        ),
+                        if (isToday)
+                          Container(
+                            margin: EdgeInsets.only(top: 4),
+                            padding: EdgeInsets.symmetric(
+                                horizontal: 6, vertical: 2),
+                            decoration: BoxDecoration(
+                              color: Colors.white,
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                            child: Text(
+                              'BUGÜN',
+                              style: TextStyle(
+                                color: Colors.green[700],
+                                fontSize: 9,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                          ),
+                      ],
                     ),
                   ),
                 );
@@ -277,7 +367,8 @@ class _MealPlanDisplayScreenState extends State<MealPlanDisplayScreen> {
                             Expanded(
                               child: Text(
                                 'Alerjen Uyarısı: Bu öğünde gluten, süt, yumurta, fındık gibi alerjenler bulunabilir. Alerjiniz varsa malzemeleri kontrol edin.',
-                                style: TextStyle(fontSize: 12, color: Colors.red[700]),
+                                style: TextStyle(
+                                    fontSize: 12, color: Colors.red[700]),
                               ),
                             ),
                           ],
@@ -324,6 +415,20 @@ class _MealPlanDisplayScreenState extends State<MealPlanDisplayScreen> {
         style:
             TextStyle(fontSize: 11, color: color, fontWeight: FontWeight.bold),
       ),
+    );
+  }
+
+  Widget _buildProfileChip(IconData icon, String value, Color color) {
+    return Row(
+      children: [
+        Icon(icon, size: 16, color: color),
+        SizedBox(width: 4),
+        Text(
+          value,
+          style: TextStyle(
+              fontSize: 10, fontWeight: FontWeight.bold, color: color),
+        ),
+      ],
     );
   }
 }

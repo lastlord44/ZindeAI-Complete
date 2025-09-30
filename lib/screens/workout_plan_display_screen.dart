@@ -1,9 +1,12 @@
 import 'package:flutter/material.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import 'dart:convert';
 
 class WorkoutPlanDisplayScreen extends StatefulWidget {
   final Map<String, dynamic> workoutPlan;
+  final Map<String, dynamic>? userProfile;
 
-  WorkoutPlanDisplayScreen({required this.workoutPlan});
+  WorkoutPlanDisplayScreen({required this.workoutPlan, this.userProfile});
 
   @override
   _WorkoutPlanDisplayScreenState createState() =>
@@ -12,20 +15,130 @@ class WorkoutPlanDisplayScreen extends StatefulWidget {
 
 class _WorkoutPlanDisplayScreenState extends State<WorkoutPlanDisplayScreen> {
   int selectedDayIndex = 0;
+  List<Map<String, dynamic>> weeklySchedule = [];
+
+  @override
+  void initState() {
+    super.initState();
+    _createWeeklySchedule();
+    _savePlan();
+  }
+
+  // Planı kaydet
+  Future<void> _savePlan() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setString('workout_plan', jsonEncode(widget.workoutPlan));
+    } catch (e) {
+      print('Plan kaydedilemedi: $e');
+    }
+  }
+
+  // Haftalık takvim oluştur - antrenman günleri + dinlenme günleri
+  void _createWeeklySchedule() {
+    final trainingPlan =
+        widget.workoutPlan['trainingPlan'] ?? widget.workoutPlan;
+    final workoutDays = trainingPlan['days'] ?? [];
+    final daysPerWeek = trainingPlan['frequency'] ?? workoutDays.length;
+
+    final weekDays = [
+      'Pazartesi',
+      'Salı',
+      'Çarşamba',
+      'Perşembe',
+      'Cuma',
+      'Cumartesi',
+      'Pazar'
+    ];
+
+    // Haftalık planı oluştur
+    int workoutIndex = 0;
+
+    if (daysPerWeek == 3) {
+      // 3 gün: Pazartesi, Çarşamba, Cuma
+      for (int i = 0; i < 7; i++) {
+        if (i == 0 || i == 2 || i == 4) {
+          // Pazartesi, Çarşamba, Cuma
+          weeklySchedule.add({
+            'dayName': weekDays[i],
+            'isRestDay': false,
+            'workout': workoutIndex < workoutDays.length
+                ? workoutDays[workoutIndex]
+                : null,
+          });
+          workoutIndex++;
+        } else {
+          weeklySchedule.add({
+            'dayName': weekDays[i],
+            'isRestDay': true,
+          });
+        }
+      }
+    } else if (daysPerWeek == 4) {
+      // 4 gün: Pazartesi, Salı, Perşembe, Cuma
+      for (int i = 0; i < 7; i++) {
+        if (i == 0 || i == 1 || i == 3 || i == 4) {
+          weeklySchedule.add({
+            'dayName': weekDays[i],
+            'isRestDay': false,
+            'workout': workoutIndex < workoutDays.length
+                ? workoutDays[workoutIndex]
+                : null,
+          });
+          workoutIndex++;
+        } else {
+          weeklySchedule.add({
+            'dayName': weekDays[i],
+            'isRestDay': true,
+          });
+        }
+      }
+    } else if (daysPerWeek == 5) {
+      // 5 gün: Pazartesi-Cuma
+      for (int i = 0; i < 7; i++) {
+        if (i < 5) {
+          weeklySchedule.add({
+            'dayName': weekDays[i],
+            'isRestDay': false,
+            'workout': workoutIndex < workoutDays.length
+                ? workoutDays[workoutIndex]
+                : null,
+          });
+          workoutIndex++;
+        } else {
+          weeklySchedule.add({
+            'dayName': weekDays[i],
+            'isRestDay': true,
+          });
+        }
+      }
+    } else if (daysPerWeek == 6) {
+      // 6 gün: Pazartesi-Cumartesi
+      for (int i = 0; i < 7; i++) {
+        if (i < 6) {
+          weeklySchedule.add({
+            'dayName': weekDays[i],
+            'isRestDay': false,
+            'workout': workoutIndex < workoutDays.length
+                ? workoutDays[workoutIndex]
+                : null,
+          });
+          workoutIndex++;
+        } else {
+          weeklySchedule.add({
+            'dayName': weekDays[i],
+            'isRestDay': true,
+          });
+        }
+      }
+    }
+  }
 
   String _formatDuration(String? duration) {
-    if (duration == null) return '8 hafta';
-    
-    // Eğer "8 hafta" formatındaysa, takvim formatına çevir
-    if (duration.contains('hafta')) {
-      final weeks = int.tryParse(duration.split(' ')[0]) ?? 8;
-      final startDate = DateTime.now();
-      final endDate = startDate.add(Duration(days: weeks * 7));
-      
-      return '${startDate.day}/${startDate.month} - ${endDate.day}/${endDate.month}';
-    }
-    
-    return duration;
+    if (duration == null) return '1 Hafta';
+
+    // Sadece "1 Hafta" göster çünkü bu haftalık programdır
+    return '1 Hafta';
   }
 
   @override
@@ -33,9 +146,8 @@ class _WorkoutPlanDisplayScreenState extends State<WorkoutPlanDisplayScreen> {
     // trainingPlan objesini al
     final trainingPlan =
         widget.workoutPlan['trainingPlan'] ?? widget.workoutPlan;
-    final days = trainingPlan['days'] ?? [];
 
-    if (days.isEmpty) {
+    if (weeklySchedule.isEmpty) {
       return Scaffold(
         appBar: AppBar(title: Text('Antrenman Planı')),
         body: Center(
@@ -53,7 +165,12 @@ class _WorkoutPlanDisplayScreenState extends State<WorkoutPlanDisplayScreen> {
       );
     }
 
-    final currentDay = days[selectedDayIndex];
+    final currentDaySchedule = weeklySchedule[selectedDayIndex];
+    final isRestDay = currentDaySchedule['isRestDay'] ?? false;
+
+    // Bugünün gününü al
+    final today = DateTime.now();
+    final todayIndex = (today.weekday - 1) % 7; // 0=Pazartesi, 6=Pazar
 
     return Scaffold(
       appBar: AppBar(
@@ -62,6 +179,37 @@ class _WorkoutPlanDisplayScreenState extends State<WorkoutPlanDisplayScreen> {
       ),
       body: Column(
         children: [
+          // Profil özeti
+          if (widget.userProfile != null)
+            Container(
+              padding: EdgeInsets.all(12),
+              color: Colors.purple[50],
+              child: SingleChildScrollView(
+                scrollDirection: Axis.horizontal,
+                child: Row(
+                  children: [
+                    _buildProfileChip(
+                        Icons.flag,
+                        widget.userProfile!['primary_goal'] ?? 'Hedef',
+                        Colors.purple),
+                    SizedBox(width: 8),
+                    _buildProfileChip(
+                        Icons.fitness_center,
+                        '${widget.userProfile!['workout_days'] ?? 3} gün',
+                        Colors.blue),
+                    SizedBox(width: 8),
+                    _buildProfileChip(Icons.monitor_weight,
+                        '${widget.userProfile!['weight'] ?? 0}kg', Colors.green),
+                    SizedBox(width: 8),
+                    _buildProfileChip(
+                        Icons.trending_up,
+                        widget.userProfile!['fitness_level'] ?? 'Seviye',
+                        Colors.orange),
+                  ],
+                ),
+              ),
+            ),
+
           // Program bilgileri
           Container(
             padding: EdgeInsets.all(16),
@@ -85,15 +233,21 @@ class _WorkoutPlanDisplayScreenState extends State<WorkoutPlanDisplayScreen> {
             ),
           ),
 
-          // Gün seçici
+          // Haftalık takvim
           Container(
-            height: 60,
+            height: 100,
             child: ListView.builder(
               scrollDirection: Axis.horizontal,
-              itemCount: days.length,
+              itemCount: weeklySchedule.length,
               itemBuilder: (context, index) {
-                final day = days[index];
+                final daySchedule = weeklySchedule[index];
                 final isSelected = index == selectedDayIndex;
+                final isRest = daySchedule['isRestDay'] ?? false;
+                final isToday = index == todayIndex;
+
+                // Tarihi hesapla (bugünden başlayarak)
+                final dayDate = today.add(Duration(days: index - todayIndex));
+                final dateStr = '${dayDate.day}/${dayDate.month}';
 
                 return GestureDetector(
                   onTap: () {
@@ -102,21 +256,92 @@ class _WorkoutPlanDisplayScreenState extends State<WorkoutPlanDisplayScreen> {
                     });
                   },
                   child: Container(
+                    width: 110,
                     margin: EdgeInsets.all(8),
-                    padding: EdgeInsets.symmetric(horizontal: 16),
+                    padding: EdgeInsets.all(8),
                     decoration: BoxDecoration(
-                      color: isSelected ? Colors.blue : Colors.grey[300],
-                      borderRadius: BorderRadius.circular(20),
-                    ),
-                    child: Center(
-                      child: Text(
-                        'Gün ${day['day']}',
-                        style: TextStyle(
-                          color: isSelected ? Colors.white : Colors.black,
-                          fontWeight:
-                              isSelected ? FontWeight.bold : FontWeight.normal,
-                        ),
+                      color: isToday
+                          ? (isRest ? Colors.green[300] : Colors.green[400])
+                          : (isRest
+                              ? (isSelected
+                                  ? Colors.grey[600]
+                                  : Colors.grey[300])
+                              : (isSelected ? Colors.blue : Colors.blue[100])),
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(
+                        color: isToday
+                            ? Colors.green[900]!
+                            : (isSelected
+                                ? Colors.blue[700]!
+                                : Colors.transparent),
+                        width: isToday ? 3 : 2,
                       ),
+                    ),
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Text(
+                          daySchedule['dayName'],
+                          style: TextStyle(
+                            color: (isSelected || isToday)
+                                ? Colors.white
+                                : (isRest
+                                    ? Colors.grey[700]
+                                    : Colors.blue[900]),
+                            fontWeight: FontWeight.bold,
+                            fontSize: 12,
+                          ),
+                          textAlign: TextAlign.center,
+                        ),
+                        SizedBox(height: 2),
+                        Text(
+                          dateStr,
+                          style: TextStyle(
+                            color: (isSelected || isToday)
+                                ? Colors.white70
+                                : Colors.grey[600],
+                            fontSize: 10,
+                          ),
+                        ),
+                        SizedBox(height: 4),
+                        Icon(
+                          isRest ? Icons.bed : Icons.fitness_center,
+                          color: (isSelected || isToday)
+                              ? Colors.white
+                              : (isRest ? Colors.grey[700] : Colors.blue[900]),
+                          size: 20,
+                        ),
+                        SizedBox(height: 2),
+                        Text(
+                          isRest ? 'DİNLENME' : 'Antrenman',
+                          style: TextStyle(
+                            color: (isSelected || isToday)
+                                ? Colors.white
+                                : (isRest
+                                    ? Colors.grey[700]
+                                    : Colors.blue[900]),
+                            fontSize: 9,
+                          ),
+                        ),
+                        if (isToday)
+                          Container(
+                            margin: EdgeInsets.only(top: 2),
+                            padding: EdgeInsets.symmetric(
+                                horizontal: 4, vertical: 1),
+                            decoration: BoxDecoration(
+                              color: Colors.white,
+                              borderRadius: BorderRadius.circular(6),
+                            ),
+                            child: Text(
+                              'BUGÜN',
+                              style: TextStyle(
+                                color: Colors.green[700],
+                                fontSize: 8,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                          ),
+                      ],
                     ),
                   ),
                 );
@@ -125,59 +350,93 @@ class _WorkoutPlanDisplayScreenState extends State<WorkoutPlanDisplayScreen> {
           ),
 
           // Günün detayları
-          Container(
-            padding: EdgeInsets.all(16),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  currentDay['name'] ?? 'Antrenman Günü',
-                  style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
-                ),
-                SizedBox(height: 4),
-                Text(
-                  'Odak: ${currentDay['focus'] ?? 'Genel'}',
-                  style: TextStyle(color: Colors.grey[600]),
-                ),
-                SizedBox(height: 8),
-                Container(
-                  padding: EdgeInsets.all(8),
-                  decoration: BoxDecoration(
-                    color: Colors.orange[50],
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                  child: Row(
-                    children: [
-                      Icon(Icons.warning_amber_rounded,
-                          color: Colors.orange, size: 20),
-                      SizedBox(width: 8),
-                      Expanded(
-                        child: Text(
-                          'Isınma: ${currentDay['warmup'] ?? '5-10 dk hafif kardiyo'}',
-                          style: TextStyle(fontSize: 12),
-                        ),
+          if (isRestDay)
+            Expanded(
+              child: Center(
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Icon(Icons.self_improvement,
+                        size: 80, color: Colors.grey[400]),
+                    SizedBox(height: 16),
+                    Text(
+                      'DİNLENME GÜNÜ',
+                      style: TextStyle(
+                        fontSize: 24,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.grey[700],
                       ),
-                    ],
-                  ),
+                    ),
+                    SizedBox(height: 8),
+                    Padding(
+                      padding: EdgeInsets.symmetric(horizontal: 32),
+                      child: Text(
+                        'Vücudunuzun toparlanması için dinlenme çok önemlidir. İyi bir uyku alın, bol su için ve hafif aktiviteler (yürüyüş, esneme) yapın.',
+                        style: TextStyle(color: Colors.grey[600], fontSize: 14),
+                        textAlign: TextAlign.center,
+                      ),
+                    ),
+                  ],
                 ),
-              ],
+              ),
+            )
+          else
+            Container(
+              padding: EdgeInsets.all(16),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    currentDaySchedule['workout']['name'] ?? 'Antrenman Günü',
+                    style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+                  ),
+                  SizedBox(height: 4),
+                  Text(
+                    'Odak: ${currentDaySchedule['workout']['focus'] ?? 'Genel'}',
+                    style: TextStyle(color: Colors.grey[600]),
+                  ),
+                  SizedBox(height: 8),
+                  Container(
+                    padding: EdgeInsets.all(8),
+                    decoration: BoxDecoration(
+                      color: Colors.orange[50],
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: Row(
+                      children: [
+                        Icon(Icons.warning_amber_rounded,
+                            color: Colors.orange, size: 20),
+                        SizedBox(width: 8),
+                        Expanded(
+                          child: Text(
+                            'Isınma: ${currentDaySchedule['workout']['warmup'] ?? '5-10 dk hafif kardiyo'}',
+                            style: TextStyle(fontSize: 12),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
             ),
-          ),
 
-          // Egzersizler listesi
-          Expanded(
-            child: ListView.builder(
-              padding: EdgeInsets.symmetric(horizontal: 16),
-              itemCount: (currentDay['exercises'] ?? []).length,
-              itemBuilder: (context, index) {
-                final exercise = currentDay['exercises'][index];
-                return _buildExerciseCard(exercise, index + 1);
-              },
+          // Egzersizler listesi (sadece antrenman günlerinde)
+          if (!isRestDay)
+            Expanded(
+              child: ListView.builder(
+                padding: EdgeInsets.symmetric(horizontal: 16),
+                itemCount:
+                    (currentDaySchedule['workout']['exercises'] ?? []).length,
+                itemBuilder: (context, index) {
+                  final exercise =
+                      currentDaySchedule['workout']['exercises'][index];
+                  return _buildExerciseCard(exercise, index + 1);
+                },
+              ),
             ),
-          ),
 
           // Soğuma bilgisi
-          if (currentDay['cooldown'] != null)
+          if (!isRestDay && currentDaySchedule['workout']['cooldown'] != null)
             Container(
               margin: EdgeInsets.all(16),
               padding: EdgeInsets.all(12),
@@ -191,7 +450,7 @@ class _WorkoutPlanDisplayScreenState extends State<WorkoutPlanDisplayScreen> {
                   SizedBox(width: 8),
                   Expanded(
                     child: Text(
-                      'Soğuma: ${currentDay['cooldown']}',
+                      'Soğuma: ${currentDaySchedule['workout']['cooldown']}',
                       style: TextStyle(fontSize: 12),
                     ),
                   ),
@@ -218,6 +477,20 @@ class _WorkoutPlanDisplayScreenState extends State<WorkoutPlanDisplayScreen> {
             value,
             style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold),
           ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildProfileChip(IconData icon, String value, Color color) {
+    return Row(
+      children: [
+        Icon(icon, size: 16, color: color),
+        SizedBox(width: 4),
+        Text(
+          value,
+          style: TextStyle(
+              fontSize: 11, fontWeight: FontWeight.bold, color: color),
         ),
       ],
     );

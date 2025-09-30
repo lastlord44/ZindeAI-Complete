@@ -355,7 +355,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
                             ),
                           ),
                           SizedBox(height: 16),
-
                           DropdownButtonFormField<String>(
                             value: _primaryGoal,
                             decoration: InputDecoration(
@@ -366,7 +365,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
                               ),
                             ),
                             items: [
-                              'Kas + Kilo Alma',
+                              'Kilo Verme',
+                              'Kas Kazanma + Kilo Alma',
                               'Kas Kazanma + Kilo Verme',
                               'Bakım',
                               'Güç Kazanma',
@@ -385,7 +385,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
                               });
                             },
                           ),
-
                         ],
                       ),
                     ),
@@ -568,6 +567,44 @@ class _ProfileScreenState extends State<ProfileScreen> {
     }
   }
 
+  // Hedefi API formatına çevir
+  String _mapGoalToAPI(String goal) {
+    switch (goal) {
+      case 'Kilo Verme':
+        return 'fat_loss';
+      case 'Kas Kazanma + Kilo Alma':
+        return 'muscle_gain';
+      case 'Kas Kazanma + Kilo Verme':
+        return 'recomp';
+      case 'Bakım':
+        return 'maintenance';
+      case 'Güç Kazanma':
+        return 'strength';
+      case 'Dayanıklılık':
+        return 'endurance';
+      default:
+        return 'maintenance';
+    }
+  }
+
+  // Aktivite seviyesini API formatına çevir
+  String _mapActivityToAPI(String activity) {
+    switch (activity) {
+      case 'Sedanter (Hareketsiz)':
+        return 'sedentary';
+      case 'Hafif Aktif':
+        return 'light';
+      case 'Orta Aktif':
+        return 'moderate';
+      case 'Çok Aktif':
+        return 'very_active';
+      case 'Aşırı Aktif':
+        return 'extra_active';
+      default:
+        return 'moderate';
+    }
+  }
+
   Future<void> _saveProfile() async {
     if (_formKey.currentState!.validate()) {
       // Profil nesnesini oluştur
@@ -609,8 +646,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
               age: int.parse(_ageController.text),
               heightCm: int.parse(_heightController.text),
               weightKg: double.parse(_weightController.text),
-              goal: _primaryGoal.toLowerCase().replaceAll(' ', '_'),
-              activity: _activityLevel.toLowerCase().replaceAll(' ', '_'),
+              goal: _mapGoalToAPI(_primaryGoal),
+              activity: _mapActivityToAPI(_activityLevel),
               dietFlags: [_dietType.toLowerCase()],
               training: TrainingPreferences(
                 daysPerWeek: _workoutDays,

@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import 'dart:convert';
 import '../models/user_profile.dart';
 import '../services/api_service.dart';
 import '../utils/logger.dart';
@@ -14,15 +16,103 @@ class PlanSelectionScreen extends StatelessWidget {
     required this.profile,
   });
 
+  // Kayıtlı beslenme planını yükle
+  Future<Map<String, dynamic>?> _loadMealPlan() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final planJson = prefs.getString('meal_plan');
+      if (planJson != null) {
+        return jsonDecode(planJson);
+      }
+    } catch (e) {
+      print('Plan yüklenemedi: $e');
+    }
+    return null;
+  }
+
+  // Kayıtlı antrenman planını yükle
+  Future<Map<String, dynamic>?> _loadWorkoutPlan() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final planJson = prefs.getString('workout_plan');
+      if (planJson != null) {
+        return jsonDecode(planJson);
+      }
+    } catch (e) {
+      print('Plan yüklenemedi: $e');
+    }
+    return null;
+  }
+
   String _getFitnessLevel() {
     // Aktivite seviyesine göre fitness level belirle
     switch (profile.activity) {
       case 'low':
+      case 'sedentary':
+      case 'light':
         return 'beginner';
       case 'high':
+      case 'very_active':
+      case 'extra_active':
         return 'advanced';
       default:
         return 'intermediate';
+    }
+  }
+
+  // Kalori hesapla
+  int _calculateCalories(UserProfile profile) {
+    // BMR hesapla (Mifflin-St Jeor)
+    double bmr;
+    if (profile.sex == 'male') {
+      bmr = (10 * profile.weightKg) +
+          (6.25 * profile.heightCm) -
+          (5 * profile.age) +
+          5;
+    } else {
+      bmr = (10 * profile.weightKg) +
+          (6.25 * profile.heightCm) -
+          (5 * profile.age) -
+          161;
+    }
+
+    // TDEE hesapla (aktivite çarpanı)
+    double activityMultiplier;
+    switch (profile.activity) {
+      case 'sedentary':
+        activityMultiplier = 1.2;
+        break;
+      case 'light':
+        activityMultiplier = 1.375;
+        break;
+      case 'moderate':
+        activityMultiplier = 1.55;
+        break;
+      case 'very_active':
+        activityMultiplier = 1.725;
+        break;
+      case 'extra_active':
+        activityMultiplier = 1.9;
+        break;
+      default:
+        activityMultiplier = 1.55;
+    }
+
+    double tdee = bmr * activityMultiplier;
+
+    // Hedefe göre kalori ayarla
+    switch (profile.goal) {
+      case 'fat_loss':
+        return (tdee * 0.8).round(); // %20 açık
+      case 'muscle_gain':
+        return (tdee * 1.15).round(); // %15 fazla
+      case 'recomp':
+        return (tdee * 0.95).round(); // Hafif açık
+      case 'strength':
+        return (tdee * 1.10).round(); // %10 fazla
+      case 'maintenance':
+      default:
+        return tdee.round();
     }
   }
 
@@ -54,13 +144,36 @@ class PlanSelectionScreen extends StatelessWidget {
             Card(
               elevation: 8,
               child: InkWell(
-                onTap: () {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (_) => MealPlanDisplayScreen(mealPlan: {}),
-                    ),
-                  );
+                onTap: () async {
+                  // Kayıtlı plan varsa onu göster
+                  final savedPlan = await _loadMealPlan();
+                  final prefs = await SharedPreferences.getInstance();
+                  final profileJson = prefs.getString('user_profile');
+                  Map<String, dynamic>? userProfile;
+                  if (profileJson != null) {
+                    userProfile = jsonDecode(profileJson);
+                  }
+
+                  if (savedPlan != null && savedPlan.isNotEmpty) {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (_) => MealPlanDisplayScreen(
+                          mealPlan: savedPlan,
+                          userProfile: userProfile,
+                        ),
+                      ),
+                    );
+                  } else {
+                    // Yeni plan oluştur
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        content: Text(
+                            'Önce "HER İKİSİNİ DE OLUŞTUR" ile plan oluşturun'),
+                        backgroundColor: Colors.orange,
+                      ),
+                    );
+                  }
                 },
                 borderRadius: BorderRadius.circular(16),
                 child: Container(
@@ -103,44 +216,75 @@ class PlanSelectionScreen extends StatelessWidget {
               elevation: 8,
               child: InkWell(
                 onTap: () async {
-                  Logger.info('Antrenman Planı kartına tıklandı',
-                      tag: 'PlanSelection');
-                  // Antrenman planı oluştur
-                  try {
-                    final apiService = context.read<ApiService>();
-                    final workoutPlan = await apiService.generateWorkoutPlan({
-                      'userId': 'user_${DateTime.now().millisecondsSinceEpoch}',
-                      'age': profile.age,
-                      'gender': profile.sex,
-                      'weight': profile.weightKg,
-                      'height': profile.heightCm.toDouble(),
-                      'fitnessLevel': _getFitnessLevel(),
-                      'goal': profile.goal,
-                      'mode': profile.training.mode,
-                      'daysPerWeek': profile.training.daysPerWeek,
-                      'preferredSplit':
-                          profile.training.splitPreference == 'AUTO'
-                              ? null
-                              : profile.training.splitPreference.toLowerCase(),
-                    });
+                  // Kayıtlı plan varsa onu göster
+                  final savedPlan = await _loadWorkoutPlan();
+                  final prefs = await SharedPreferences.getInstance();
+                  final profileJson = prefs.getString('user_profile');
+                  Map<String, dynamic>? userProfile;
+                  if (profileJson != null) {
+                    userProfile = jsonDecode(profileJson);
+                  }
 
-                    if (context.mounted) {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (_) => WorkoutPlanDisplayScreen(
-                              workoutPlan: workoutPlan),
+                  if (savedPlan != null && savedPlan.isNotEmpty) {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (_) => WorkoutPlanDisplayScreen(
+                          workoutPlan: savedPlan,
+                          userProfile: userProfile,
                         ),
-                      );
-                    }
-                  } catch (e) {
-                    if (context.mounted) {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(
-                          content: Text('Antrenman planı oluşturulamadı: $e'),
-                          backgroundColor: Colors.red,
-                        ),
-                      );
+                      ),
+                    );
+                  } else {
+                    // Yeni plan oluştur
+                    Logger.info('Antrenman Planı kartına tıklandı',
+                        tag: 'PlanSelection');
+                    try {
+                      final apiService = context.read<ApiService>();
+                      final workoutPlan = await apiService.generateWorkoutPlan({
+                        'userId':
+                            'user_${DateTime.now().millisecondsSinceEpoch}',
+                        'age': profile.age,
+                        'gender': profile.sex,
+                        'weight': profile.weightKg,
+                        'height': profile.heightCm.toDouble(),
+                        'fitnessLevel': _getFitnessLevel(),
+                        'goal': profile.goal,
+                        'mode': profile.training.mode,
+                        'daysPerWeek': profile.training.daysPerWeek,
+                        'preferredSplit': profile.training.splitPreference ==
+                                'AUTO'
+                            ? null
+                            : profile.training.splitPreference.toLowerCase(),
+                      });
+
+                      if (context.mounted) {
+                        final prefs = await SharedPreferences.getInstance();
+                        final profileJson = prefs.getString('user_profile');
+                        Map<String, dynamic>? userProfile;
+                        if (profileJson != null) {
+                          userProfile = jsonDecode(profileJson);
+                        }
+
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (_) => WorkoutPlanDisplayScreen(
+                              workoutPlan: workoutPlan,
+                              userProfile: userProfile,
+                            ),
+                          ),
+                        );
+                      }
+                    } catch (e) {
+                      if (context.mounted) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(
+                            content: Text('Antrenman planı oluşturulamadı: $e'),
+                            backgroundColor: Colors.red,
+                          ),
+                        );
+                      }
                     }
                   }
                 },
@@ -198,26 +342,52 @@ class PlanSelectionScreen extends StatelessWidget {
                   try {
                     final apiService = context.read<ApiService>();
 
-                    // Beslenme planı oluştur
+                    // Kalori hesapla
+                    final calories = _calculateCalories(profile);
+
+                    print('🔥 HESAPLANAN KALORİ: $calories');
+                    print(
+                        '🎯 KULLANICI BİLGİLERİ: ${profile.weightKg}kg, ${profile.goal}');
+
+                    // Beslenme planı oluştur - API'nin beklediği formatta
                     final mealPlan = await apiService.generateMealPlan({
-                      'weight': profile.weightKg,
-                      'height': profile.heightCm,
+                      'goal': profile.goal, // muscle_gain, fat_loss, etc.
                       'age': profile.age,
-                      'gender': profile.sex == 'male' ? 'Erkek' : 'Kadın',
-                      'primary_goal': profile.goal,
-                      'diet_type': profile.dietFlags.isNotEmpty
+                      'sex': profile.sex, // male/female
+                      'weight_kg': profile.weightKg,
+                      'weight':
+                          profile.weightKg, // Hem weight_kg hem weight gönder
+                      'height_cm': profile.heightCm,
+                      'activity_level':
+                          profile.activity, // moderate, high, etc.
+                      'diet': profile.dietFlags.isNotEmpty
                           ? profile.dietFlags.first
-                          : 'Normal',
-                      'preserve_muscle': profile.goal == 'lose_weight',
+                          : 'balanced',
+                      'daysOfWeek': 7,
+                      'calories': calories,
+                      'primary_goal': profile.goal, // Ekstra güvenlik
                     });
 
                     // İlk istek tamamlandı, loading'i kapat
                     if (context.mounted) Navigator.pop(context);
+
+                    final prefs = await SharedPreferences.getInstance();
+                    final profileJson = prefs.getString('user_profile');
+                    Map<String, dynamic>? userProfile;
+                    if (profileJson != null) {
+                      userProfile = jsonDecode(profileJson);
+                      if (userProfile != null) {
+                        userProfile['target_calories'] = calories;
+                      }
+                    }
+
                     await Navigator.push(
                       context,
                       MaterialPageRoute(
-                        builder: (_) =>
-                            MealPlanDisplayScreen(mealPlan: mealPlan),
+                        builder: (_) => MealPlanDisplayScreen(
+                          mealPlan: mealPlan,
+                          userProfile: userProfile,
+                        ),
                       ),
                     );
 
@@ -240,11 +410,20 @@ class PlanSelectionScreen extends StatelessWidget {
                             : profile.training.splitPreference.toLowerCase(),
                       });
 
+                      final prefs = await SharedPreferences.getInstance();
+                      final profileJson = prefs.getString('user_profile');
+                      Map<String, dynamic>? userProfile;
+                      if (profileJson != null) {
+                        userProfile = jsonDecode(profileJson);
+                      }
+
                       Navigator.push(
                         context,
                         MaterialPageRoute(
                           builder: (_) => WorkoutPlanDisplayScreen(
-                              workoutPlan: workoutPlan),
+                            workoutPlan: workoutPlan,
+                            userProfile: userProfile,
+                          ),
                         ),
                       );
                     }
