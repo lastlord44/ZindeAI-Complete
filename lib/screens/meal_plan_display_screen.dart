@@ -1,593 +1,329 @@
 import 'package:flutter/material.dart';
-import '../models/meal_plan.dart';
-import '../models/user_profile.dart';
-import '../services/api_service.dart';
-import '../widgets/loading_widget.dart';
-import '../widgets/error_widget.dart' as app;
+import 'package:shared_preferences/shared_preferences.dart';
 import 'meal_tracker_screen.dart';
 import 'shopping_list_screen.dart';
 
 class MealPlanDisplayScreen extends StatefulWidget {
-  final UserProfile profile;
+  final Map<String, dynamic> mealPlan;
 
-  const MealPlanDisplayScreen({
-    super.key,
-    required this.profile,
-  });
+  MealPlanDisplayScreen({required this.mealPlan});
 
   @override
-  State<MealPlanDisplayScreen> createState() => _MealPlanDisplayScreenState();
+  _MealPlanDisplayScreenState createState() => _MealPlanDisplayScreenState();
 }
 
 class _MealPlanDisplayScreenState extends State<MealPlanDisplayScreen> {
-  Map<String, dynamic>? _mealPlan;
-  bool _isLoading = true;
-  String? _error;
-  int _selectedDay = DateTime.now().weekday; // 1=Pazartesi, 7=Pazar
-
-  // Öğün takip durumu
-  Map<String, bool> _mealConsumed = {}; // "day_meal" -> true/false
+  int selectedDayIndex = 0;
+  Map<String, bool> mealStatus = {};
 
   @override
   void initState() {
     super.initState();
-    _loadMealPlan();
+    loadMealStatus();
   }
 
-  Future<void> _loadMealPlan() async {
-    try {
-      final apiService = ApiService();
-
-      // Kalori hesapla
-      final bmr = _calculateBMR();
-      final tdee = _calculateTDEE(bmr);
-      final targetCalories = _getTargetCalories(tdee);
-
-      final plan = await apiService.createMealPlan(
-        calories: targetCalories,
-        goal: _getMealGoal(),
-        diet: _getDietType(),
-        daysPerWeek: 7,
-        preferences: widget.profile.dietFlags.isNotEmpty
-            ? {for (var flag in widget.profile.dietFlags) flag: true}
-            : {},
-        // Profil bilgileri
-        age: widget.profile.age,
-        sex: widget.profile.sex,
-        weight: widget.profile.weightKg,
-        height: widget.profile.heightCm.toDouble(),
-        activity: widget.profile.activity,
-      );
-
-      setState(() {
-        _mealPlan = plan;
-        _isLoading = false;
+  void loadMealStatus() async {
+    final prefs = await SharedPreferences.getInstance();
+    setState(() {
+      // Öğün durumlarını yükle
+      widget.mealPlan['days']?.forEach((day) {
+        final dayName = day['dayName'] ?? 'Gün ${day['day']}';
+        ['sabah', 'ara_ogun_1', 'ogle', 'ara_ogun_2', 'aksam'].forEach((meal) {
+          final key = '${dayName}_$meal';
+          mealStatus[key] = prefs.getBool(key) ?? false;
+        });
       });
-    } catch (e) {
-      setState(() {
-        _error = e.toString();
-        _isLoading = false;
-      });
-    }
+    });
   }
 
-  double _calculateBMR() {
-    if (widget.profile.sex == 'male') {
-      return 88.362 +
-          (13.397 * widget.profile.weightKg) +
-          (4.799 * widget.profile.heightCm) -
-          (5.677 * widget.profile.age);
-    } else {
-      return 447.593 +
-          (9.247 * widget.profile.weightKg) +
-          (4.330 * widget.profile.heightCm) -
-          (4.330 * widget.profile.age);
-    }
-  }
+  void toggleMealStatus(String dayName, String mealType) async {
+    final prefs = await SharedPreferences.getInstance();
+    final key = '${dayName}_$mealType';
 
-  double _calculateTDEE(double bmr) {
-    switch (widget.profile.activity) {
-      case 'low':
-        return bmr * 1.2;
-      case 'moderate':
-        return bmr * 1.55;
-      case 'high':
-        return bmr * 1.9;
-      default:
-        return bmr * 1.375;
-    }
-  }
+    setState(() {
+      mealStatus[key] = !(mealStatus[key] ?? false);
+    });
 
-  int _getTargetCalories(double tdee) {
-    switch (widget.profile.goal) {
-      case 'fat_loss':
-        return (tdee * 0.8).round();
-      case 'muscle_gain':
-        return (tdee * 1.2).round();
-      default:
-        return tdee.round();
-    }
-  }
+    await prefs.setBool(key, mealStatus[key]!);
 
-  String _getMealGoal() {
-    switch (widget.profile.goal) {
-      case 'fat_loss':
-        return 'lose_weight';
-      case 'muscle_gain':
-        return 'gain_weight';
-      default:
-        return 'maintain';
-    }
-  }
-
-  String _getDietType() {
-    if (widget.profile.dietFlags.contains('vegan')) return 'vegan';
-    if (widget.profile.dietFlags.contains('vegetarian')) return 'vegetarian';
-    return 'balanced';
-  }
-
-  void _showWeeklyReport() {
-    // Haftalık rapor göster
-    showDialog(
-      context: context,
-      builder: (_) => AlertDialog(
-        title: Text('📊 Haftalık Rapor'),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Text(
-                'Bu hafta toplam ${_mealPlan?['days']?.length ?? 0} gün planınız var.'),
-            SizedBox(height: 16),
-            ElevatedButton(
-              onPressed: () => Navigator.pop(context),
-              child: Text('Tamam'),
-            ),
-          ],
-        ),
+    // Görsel feedback
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content:
+            Text(mealStatus[key]! ? '✅ Öğün tamamlandı!' : '⏰ Öğün bekleniyor'),
+        duration: Duration(seconds: 1),
+        backgroundColor: mealStatus[key]! ? Colors.green : Colors.orange,
       ),
     );
   }
 
   @override
   Widget build(BuildContext context) {
+    final days = widget.mealPlan['days'] ?? [];
+
+    if (days.isEmpty) {
+      return Scaffold(
+        appBar: AppBar(title: Text('Beslenme Planı')),
+        body: Center(child: Text('Beslenme planı bulunamadı')),
+      );
+    }
+
+    final currentDay = days[selectedDayIndex];
+    final meals = currentDay['meals'] ?? {};
+    final dayName = currentDay['dayName'] ?? 'Gün ${currentDay['day']}';
+
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Beslenme Planınız'),
+        title: Text('7 Günlük Beslenme Planı'),
         backgroundColor: Colors.green,
-        foregroundColor: Colors.white,
         actions: [
           IconButton(
-            icon: Icon(Icons.checklist),
-            tooltip: 'Öğün Takibi',
+            icon: Icon(Icons.restaurant_menu),
             onPressed: () {
               Navigator.push(
                 context,
                 MaterialPageRoute(
-                  builder: (_) => MealTrackerScreen(mealPlan: _mealPlan!),
+                  builder: (_) => MealTrackerScreen(mealPlan: widget.mealPlan),
                 ),
               );
             },
+            tooltip: 'Öğün Takibi',
           ),
           IconButton(
             icon: Icon(Icons.shopping_cart),
-            tooltip: 'Alışveriş Listesi',
             onPressed: () {
               Navigator.push(
                 context,
                 MaterialPageRoute(
-                  builder: (_) => ShoppingListScreen(mealPlan: _mealPlan!),
+                  builder: (_) => ShoppingListScreen(mealPlan: widget.mealPlan),
                 ),
               );
             },
-          ),
-          IconButton(
-            icon: Icon(Icons.analytics),
-            tooltip: 'Haftalık Rapor',
-            onPressed: _showWeeklyReport,
+            tooltip: 'Alışveriş Listesi',
           ),
         ],
       ),
-      body: _isLoading
-          ? const LoadingWidget()
-          : _error != null
-              ? app.ErrorWidget(
-                  message: _error!,
-                  onRetry: () {
+      body: Column(
+        children: [
+          // Gün seçici
+          Container(
+            height: 60,
+            child: ListView.builder(
+              scrollDirection: Axis.horizontal,
+              itemCount: days.length,
+              itemBuilder: (context, index) {
+                final day = days[index];
+                final isSelected = index == selectedDayIndex;
+
+                return GestureDetector(
+                  onTap: () {
                     setState(() {
-                      _isLoading = true;
-                      _error = null;
+                      selectedDayIndex = index;
                     });
-                    _loadMealPlan();
                   },
-                )
-              : _mealPlan != null
-                  ? _MealPlanView(plan: _mealPlan!)
-                  : const Center(child: Text('Beslenme planı bulunamadı')),
+                  child: Container(
+                    width: 100,
+                    margin: EdgeInsets.all(8),
+                    decoration: BoxDecoration(
+                      color: isSelected ? Colors.green : Colors.grey[300],
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    child: Center(
+                      child: Text(
+                        day['dayName'] ?? 'Gün ${day['day']}',
+                        style: TextStyle(
+                          color: isSelected ? Colors.white : Colors.black,
+                          fontWeight:
+                              isSelected ? FontWeight.bold : FontWeight.normal,
+                        ),
+                      ),
+                    ),
+                  ),
+                );
+              },
+            ),
+          ),
+
+          // Günlük özet
+          Container(
+            padding: EdgeInsets.all(16),
+            color: Colors.green[50],
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceAround,
+              children: [
+                _buildMacroCard(
+                    'Kalori', '${currentDay['totalCalories'] ?? 0}', 'kcal'),
+                _buildMacroCard(
+                    'Protein', '${currentDay['macros']?['protein'] ?? 0}', 'g'),
+                _buildMacroCard(
+                    'Karb', '${currentDay['macros']?['carbs'] ?? 0}', 'g'),
+                _buildMacroCard(
+                    'Yağ', '${currentDay['macros']?['fats'] ?? 0}', 'g'),
+              ],
+            ),
+          ),
+
+          // Öğünler listesi
+          Expanded(
+            child: ListView(
+              padding: EdgeInsets.all(16),
+              children: [
+                _buildMealCard('Sabah', meals['sabah'], dayName),
+                SizedBox(height: 12),
+                _buildMealCard('Ara Öğün 1', meals['ara_ogun_1'], dayName),
+                SizedBox(height: 12),
+                _buildMealCard('Öğle', meals['ogle'], dayName),
+                SizedBox(height: 12),
+                _buildMealCard('Ara Öğün 2', meals['ara_ogun_2'], dayName),
+                SizedBox(height: 12),
+                _buildMealCard('Akşam', meals['aksam'], dayName),
+              ],
+            ),
+          ),
+        ],
+      ),
     );
   }
-}
 
-class _MealPlanView extends StatefulWidget {
-  final Map<String, dynamic> plan;
-
-  const _MealPlanView({required this.plan});
-
-  @override
-  State<_MealPlanView> createState() => _MealPlanViewState();
-}
-
-class _MealPlanViewState extends State<_MealPlanView> {
-  int _selectedDay = DateTime.now().weekday; // 1=Pazartesi, 7=Pazar
-
-  // Öğün takip durumu
-  Map<String, bool> _mealConsumed = {}; // "day_meal" -> true/false
-
-  @override
-  Widget build(BuildContext context) {
+  Widget _buildMacroCard(String title, String value, String unit) {
     return Column(
       children: [
-        // Haftalık Takvim
-        _buildWeeklyCalendar(),
-        const SizedBox(height: 16),
-        // Seçili Günün Detayları
-        Expanded(
-          child: _buildSelectedDayDetails(),
-        ),
+        Text(title, style: TextStyle(fontSize: 12, color: Colors.grey[600])),
+        Text('$value',
+            style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+        Text(unit, style: TextStyle(fontSize: 10, color: Colors.grey[600])),
       ],
     );
   }
 
-  Widget _buildWeeklyCalendar() {
-    final days = [
-      'Pazartesi',
-      'Salı',
-      'Çarşamba',
-      'Perşembe',
-      'Cuma',
-      'Cumartesi',
-      'Pazar'
-    ];
+  Widget _buildMealCard(
+      String mealTitle, Map<String, dynamic>? meal, String dayName) {
+    if (meal == null) return Container();
 
-    return Container(
-      margin: const EdgeInsets.all(16.0),
-      padding: const EdgeInsets.all(16.0),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(12),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.grey.withValues(alpha: 0.1),
-            spreadRadius: 1,
-            blurRadius: 4,
-            offset: const Offset(0, 2),
-          ),
-        ],
-      ),
+    final mealKey =
+        '${dayName}_${mealTitle.toLowerCase().replaceAll(' ', '_')}';
+    final isConsumed = mealStatus[mealKey] ?? false;
+
+    return Card(
+      elevation: 4,
+      color: isConsumed ? Colors.green[50] : Colors.white,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text(
-            'Haftalık Plan',
-            style: TextStyle(
-              fontSize: 18,
-              fontWeight: FontWeight.bold,
-              color: Colors.green,
+          // Başlık ve checkbox
+          ListTile(
+            title: Text(
+              mealTitle,
+              style: TextStyle(
+                fontSize: 16,
+                fontWeight: FontWeight.bold,
+                color: Colors.green[700],
+              ),
+            ),
+            subtitle: Text(
+              meal['name'] ?? '',
+              style: TextStyle(fontSize: 14),
+            ),
+            trailing: IconButton(
+              icon: Icon(
+                isConsumed ? Icons.check_circle : Icons.circle_outlined,
+                color: isConsumed ? Colors.green : Colors.grey,
+                size: 30,
+              ),
+              onPressed: () {
+                toggleMealStatus(
+                    dayName, mealTitle.toLowerCase().replaceAll(' ', '_'));
+              },
             ),
           ),
-          const SizedBox(height: 12),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceAround,
-            children: List.generate(7, (index) {
-              final dayNumber = index + 1;
-              final isSelected = _selectedDay == dayNumber;
-              final dayName = days[index];
 
-              return GestureDetector(
-                onTap: () {
-                  setState(() {
-                    _selectedDay = dayNumber;
-                  });
-                },
-                child: Container(
-                  width: 40,
-                  height: 40,
-                  decoration: BoxDecoration(
-                    color: isSelected ? Colors.green : Colors.grey[200],
-                    borderRadius: BorderRadius.circular(20),
-                  ),
+          // Besin değerleri
+          Padding(
+            padding: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceAround,
+              children: [
+                _buildNutrientBadge(
+                    '${meal['calories'] ?? 0} kcal', Colors.orange),
+                _buildNutrientBadge('P: ${meal['protein'] ?? 0}g', Colors.red),
+                _buildNutrientBadge('K: ${meal['carbs'] ?? 0}g', Colors.blue),
+                _buildNutrientBadge('Y: ${meal['fats'] ?? 0}g', Colors.purple),
+              ],
+            ),
+          ),
+
+          // Malzemeler
+          if (meal['ingredients'] != null)
+            ExpansionTile(
+              title: Text('Malzemeler', style: TextStyle(fontSize: 14)),
+              children: [
+                Padding(
+                  padding: EdgeInsets.all(16),
                   child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
+                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text(
-                        dayNumber.toString(),
-                        style: TextStyle(
-                          color: isSelected ? Colors.white : Colors.black87,
-                          fontWeight: FontWeight.bold,
-                          fontSize: 16,
+                      // Alerjen uyarısı
+                      Container(
+                        padding: EdgeInsets.all(8),
+                        decoration: BoxDecoration(
+                          color: Colors.red[50],
+                          borderRadius: BorderRadius.circular(8),
+                          border: Border.all(color: Colors.red[200]!),
+                        ),
+                        child: Row(
+                          children: [
+                            Icon(Icons.warning, color: Colors.red, size: 16),
+                            SizedBox(width: 8),
+                            Expanded(
+                              child: Text(
+                                'Alerjen Uyarısı: Bu öğünde gluten, süt, yumurta, fındık gibi alerjenler bulunabilir. Alerjiniz varsa malzemeleri kontrol edin.',
+                                style: TextStyle(fontSize: 12, color: Colors.red[700]),
+                              ),
+                            ),
+                          ],
                         ),
                       ),
-                      Text(
-                        dayName.substring(0, 3),
-                        style: TextStyle(
-                          color: isSelected ? Colors.white : Colors.grey[600],
-                          fontSize: 10,
-                        ),
-                      ),
+                      SizedBox(height: 12),
+                      // Malzemeler listesi
+                      ...(meal['ingredients'] as List).map((ingredient) {
+                        return Padding(
+                          padding: EdgeInsets.symmetric(vertical: 2),
+                          child: Row(
+                            children: [
+                              Icon(Icons.arrow_right,
+                                  size: 16, color: Colors.grey),
+                              SizedBox(width: 4),
+                              Text(
+                                '${ingredient['name']} - ${ingredient['amount']}',
+                                style: TextStyle(fontSize: 13),
+                              ),
+                            ],
+                          ),
+                        );
+                      }).toList(),
                     ],
                   ),
                 ),
-              );
-            }),
-          ),
+              ],
+            ),
         ],
       ),
     );
   }
 
-  int _getDayNumber(String dayString) {
-    // Gün adını sayıya çevir
-    switch (dayString.toLowerCase()) {
-      case 'pazartesi':
-      case 'monday':
-      case '1':
-        return 1;
-      case 'salı':
-      case 'tuesday':
-      case '2':
-        return 2;
-      case 'çarşamba':
-      case 'wednesday':
-      case '3':
-        return 3;
-      case 'perşembe':
-      case 'thursday':
-      case '4':
-        return 4;
-      case 'cuma':
-      case 'friday':
-      case '5':
-        return 5;
-      case 'cumartesi':
-      case 'saturday':
-      case '6':
-        return 6;
-      case 'pazar':
-      case 'sunday':
-      case '7':
-        return 7;
-      default:
-        // Sayı olarak parse etmeyi dene
-        try {
-          return int.parse(dayString);
-        } catch (e) {
-          return 1; // Varsayılan olarak Pazartesi
-        }
-    }
-  }
-
-  Widget _buildSelectedDayDetails() {
-    // API'den gelen day değeri 1-7 arası int, _selectedDay de 1-7 arası
-    final days = widget.plan['days'] as List<dynamic>? ?? [];
-    final selectedDayPlan = days.firstWhere(
-      (day) => _getDayNumber(day['day'].toString()) == _selectedDay,
-      orElse: () => days.isNotEmpty ? days.first : <String, dynamic>{},
-    );
-
-    if (selectedDayPlan == null) {
-      return const Center(child: Text('Bu gün için plan bulunamadı'));
-    }
-
-    return ListView(
-      padding: const EdgeInsets.all(16.0),
-      children: [
-        // Günlük Özet
-        _buildDailySummary(selectedDayPlan),
-        const SizedBox(height: 16),
-        // Öğün Detayları
-        ...(selectedDayPlan['meals'] as List<dynamic>? ?? [])
-            .map((meal) => _buildMealCard(meal)),
-      ],
-    );
-  }
-
-  Widget _buildDailySummary(Map<String, dynamic> dayPlan) {
-    return Card(
-      elevation: 4,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-      child: Padding(
-        padding: const EdgeInsets.all(16.0),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              'Gün ${dayPlan['day']} - Günlük Özet',
-              style: const TextStyle(
-                fontSize: 20,
-                fontWeight: FontWeight.bold,
-                color: Colors.green,
-              ),
-            ),
-            const SizedBox(height: 12),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceAround,
-              children: [
-                _buildSummaryItem(
-                    'Kalori', '${dayPlan['totals']?['calories'] ?? 0}', 'kcal'),
-                _buildSummaryItem(
-                    'Protein', '${dayPlan['totals']?['protein'] ?? 0}', 'g'),
-                _buildSummaryItem(
-                    'Karbonhidrat', '${dayPlan['totals']?['carbs'] ?? 0}', 'g'),
-                _buildSummaryItem(
-                    'Yağ', '${dayPlan['totals']?['fat'] ?? 0}', 'g'),
-              ],
-            ),
-          ],
-        ),
+  Widget _buildNutrientBadge(String text, Color color) {
+    return Container(
+      padding: EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      decoration: BoxDecoration(
+        color: color.withOpacity(0.1),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: color.withOpacity(0.3)),
       ),
-    );
-  }
-
-  Widget _buildSummaryItem(String label, String value, String unit) {
-    return Column(
-      children: [
-        Text(
-          value,
-          style: const TextStyle(
-            fontSize: 18,
-            fontWeight: FontWeight.bold,
-            color: Colors.green,
-          ),
-        ),
-        Text(
-          '$label ($unit)',
-          style: TextStyle(
-            fontSize: 12,
-            color: Colors.grey[600],
-          ),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildMealCard(Map<String, dynamic> meal) {
-    final mealKey = '${_selectedDay}_${meal['name']}';
-    final isConsumed = _mealConsumed[mealKey] ?? false;
-
-    return Card(
-      margin: const EdgeInsets.only(bottom: 12.0),
-      elevation: 2,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-      child: Padding(
-        padding: const EdgeInsets.all(16.0),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              meal['name'],
-              style: const TextStyle(
-                fontSize: 18,
-                fontWeight: FontWeight.bold,
-                color: Colors.green,
-              ),
-            ),
-            const SizedBox(height: 8),
-            // Yemek tarifi - Collapsible
-            if (meal['recipe'] != null && meal['recipe'].toString().isNotEmpty)
-              Container(
-                width: double.infinity,
-                padding: const EdgeInsets.all(12.0),
-                margin: const EdgeInsets.only(bottom: 8.0),
-                decoration: BoxDecoration(
-                  color: Colors.grey[50],
-                  borderRadius: BorderRadius.circular(8),
-                  border: Border.all(color: Colors.grey[300]!),
-                ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const Text(
-                      '👨‍🍳 Tarif:',
-                      style: TextStyle(
-                        fontWeight: FontWeight.bold,
-                        color: Colors.green,
-                      ),
-                    ),
-                    const SizedBox(height: 8),
-                    Container(
-                      constraints: BoxConstraints(maxHeight: 200), // Max height
-                      child: SingleChildScrollView(
-                        child: Text(
-                          meal['recipe'].toString(),
-                          style: const TextStyle(fontSize: 14),
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            // Malzemeler
-            Text('📝 Malzemeler:',
-                style: TextStyle(fontWeight: FontWeight.bold)),
-            SizedBox(height: 8),
-            Container(
-              constraints: BoxConstraints(maxHeight: 150), // Max height
-              child: SingleChildScrollView(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: (meal['ingredients'] as List<dynamic>? ?? [])
-                      .map((item) => Padding(
-                            padding: const EdgeInsets.only(bottom: 4.0),
-                            child: Text(
-                                '- ${item['name']} (${item['amount']} ${item['unit']})'),
-                          ))
-                      .toList(),
-                ),
-              ),
-            ),
-            const SizedBox(height: 8),
-            // Makrolar
-            SizedBox(height: 16),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceAround,
-              children: [
-                _buildMacroChip('Protein', meal['protein']?.toDouble() ?? 0.0),
-                _buildMacroChip('Karb', meal['carbs']?.toDouble() ?? 0.0),
-                _buildMacroChip('Yağ', meal['fat']?.toDouble() ?? 0.0),
-              ],
-            ),
-            const SizedBox(height: 12),
-            // Yedim/Yemedim butonları
-            Row(
-              children: [
-                Expanded(
-                  child: ElevatedButton.icon(
-                    onPressed: isConsumed
-                        ? null
-                        : () {
-                            setState(() {
-                              _mealConsumed[mealKey] = true;
-                            });
-                          },
-                    icon: const Icon(Icons.check, color: Colors.white),
-                    label: const Text('✔ Öğünümü Yedim'),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.green,
-                      foregroundColor: Colors.white,
-                      disabledBackgroundColor: Colors.green.shade300,
-                    ),
-                  ),
-                ),
-                const SizedBox(width: 8),
-                Expanded(
-                  child: ElevatedButton.icon(
-                    onPressed: !isConsumed
-                        ? null
-                        : () {
-                            setState(() {
-                              _mealConsumed[mealKey] = false;
-                            });
-                          },
-                    icon: const Icon(Icons.close, color: Colors.white),
-                    label: const Text('X Öğünümü Yemedim'),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.red,
-                      foregroundColor: Colors.white,
-                      disabledBackgroundColor: Colors.red.shade300,
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          ],
-        ),
+      child: Text(
+        text,
+        style:
+            TextStyle(fontSize: 11, color: color, fontWeight: FontWeight.bold),
       ),
-    );
-  }
-
-  Widget _buildMacroChip(String label, dynamic value) {
-    return Chip(
-      label: Text('$label: ${value ?? 0}g'),
-      backgroundColor: Colors.blue.shade50,
     );
   }
 }

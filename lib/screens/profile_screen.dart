@@ -3,7 +3,6 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'dart:convert';
 import '../models/user_profile.dart';
 import 'plan_selection_screen.dart';
-import '../utils/user_info_helper.dart';
 
 class ProfileScreen extends StatefulWidget {
   const ProfileScreen({super.key});
@@ -20,12 +19,13 @@ class _ProfileScreenState extends State<ProfileScreen> {
   final TextEditingController _ageController = TextEditingController();
   final TextEditingController _heightController = TextEditingController();
   final TextEditingController _weightController = TextEditingController();
-  
+
   // Seçimler
   String _gender = 'Erkek';
   String _fitnessLevel = 'Başlangıç';
   String _primaryGoal = 'Kilo Verme';
-  bool _preserveMuscle = false; // Kas kütlesi koruma
+  bool _preserveMuscle =
+      false; // Kas kütlesi koruma - BU DEĞİŞKEN KAYBOLMAYACAK
   int _workoutDays = 3;
   String _dietType = 'Dengeli';
   String _activityLevel = 'Orta Aktif';
@@ -33,18 +33,18 @@ class _ProfileScreenState extends State<ProfileScreen> {
   @override
   void initState() {
     super.initState();
-      _loadProfile();
+    _loadProfile();
   }
 
   Future<void> _loadProfile() async {
     try {
-    final prefs = await SharedPreferences.getInstance();
-    final profileJson = prefs.getString('user_profile');
+      final prefs = await SharedPreferences.getInstance();
+      final profileJson = prefs.getString('user_profile');
 
-    if (profileJson != null) {
+      if (profileJson != null) {
         final profile = jsonDecode(profileJson);
-        
-      setState(() {
+
+        setState(() {
           _nameController.text = profile['name'] ?? '';
           _ageController.text = profile['age']?.toString() ?? '25';
           _heightController.text = profile['height']?.toString() ?? '170';
@@ -86,11 +86,11 @@ class _ProfileScreenState extends State<ProfileScreen> {
         child: SingleChildScrollView(
           child: Padding(
             padding: EdgeInsets.all(16),
-        child: Form(
-          key: _formKey,
-          child: Column(
+            child: Form(
+              key: _formKey,
+              child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
+                children: [
                   // Başlık kartı
                   Card(
                     elevation: 4,
@@ -99,9 +99,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     ),
                     child: Padding(
                       padding: EdgeInsets.all(16),
-                child: Column(
-                  children: [
-                    Icon(
+                      child: Column(
+                        children: [
+                          Icon(
                             Icons.person,
                             size: 50,
                             color: Colors.deepPurple,
@@ -109,9 +109,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
                           SizedBox(height: 8),
                           Text(
                             'Kişisel Bilgiler',
-                      style: TextStyle(
+                            style: TextStyle(
                               fontSize: 22,
-                        fontWeight: FontWeight.bold,
+                              fontWeight: FontWeight.bold,
                               color: Colors.deepPurple,
                             ),
                           ),
@@ -119,20 +119,20 @@ class _ProfileScreenState extends State<ProfileScreen> {
                       ),
                     ),
                   ),
-                  
+
                   SizedBox(height: 20),
-                  
+
                   // Temel bilgiler
-              Card(
+                  Card(
                     elevation: 2,
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(12),
                     ),
-                child: Padding(
+                    child: Padding(
                       padding: EdgeInsets.all(16),
-                  child: Column(
+                      child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
+                        children: [
                           Text(
                             'Temel Bilgiler',
                             style: TextStyle(
@@ -142,7 +142,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
                             ),
                           ),
                           SizedBox(height: 16),
-                          
                           TextFormField(
                             controller: _nameController,
                             decoration: InputDecoration(
@@ -159,29 +158,27 @@ class _ProfileScreenState extends State<ProfileScreen> {
                               return null;
                             },
                           ),
-                          
                           SizedBox(height: 16),
-                          
-                      Row(
-                        children: [
-                          Expanded(
-                            child: TextFormField(
-                              controller: _ageController,
-                              keyboardType: TextInputType.number,
+                          Row(
+                            children: [
+                              Expanded(
+                                child: TextFormField(
+                                  controller: _ageController,
+                                  keyboardType: TextInputType.number,
                                   decoration: InputDecoration(
                                     labelText: 'Yaş',
-                                prefixIcon: Icon(Icons.cake),
+                                    prefixIcon: Icon(Icons.cake),
                                     border: OutlineInputBorder(
                                       borderRadius: BorderRadius.circular(8),
                                     ),
-                              ),
-                              validator: (value) {
-                                if (value == null || value.isEmpty) {
-                                  return 'Gerekli';
-                                }
-                                return null;
-                              },
-                            ),
+                                  ),
+                                  validator: (value) {
+                                    if (value == null || value.isEmpty) {
+                                      return 'Gerekli';
+                                    }
+                                    return null;
+                                  },
+                                ),
                               ),
                               SizedBox(width: 8),
                               Expanded(
@@ -209,70 +206,68 @@ class _ProfileScreenState extends State<ProfileScreen> {
                               ),
                             ],
                           ),
-                          
                           SizedBox(height: 16),
-                          
                           Row(
                             children: [
-                          Expanded(
-                            child: TextFormField(
-                              controller: _heightController,
-                              keyboardType: TextInputType.number,
+                              Expanded(
+                                child: TextFormField(
+                                  controller: _heightController,
+                                  keyboardType: TextInputType.number,
                                   decoration: InputDecoration(
                                     labelText: 'Boy (cm)',
-                                prefixIcon: Icon(Icons.height),
+                                    prefixIcon: Icon(Icons.height),
                                     border: OutlineInputBorder(
                                       borderRadius: BorderRadius.circular(8),
                                     ),
+                                  ),
+                                  validator: (value) {
+                                    if (value == null || value.isEmpty) {
+                                      return 'Gerekli';
+                                    }
+                                    return null;
+                                  },
+                                ),
                               ),
-                              validator: (value) {
-                                if (value == null || value.isEmpty) {
-                                  return 'Gerekli';
-                                }
-                                return null;
-                              },
-                            ),
-                          ),
                               SizedBox(width: 8),
-                          Expanded(
-                            child: TextFormField(
-                              controller: _weightController,
-                              keyboardType: TextInputType.number,
+                              Expanded(
+                                child: TextFormField(
+                                  controller: _weightController,
+                                  keyboardType: TextInputType.number,
                                   decoration: InputDecoration(
                                     labelText: 'Kilo (kg)',
-                                prefixIcon: Icon(Icons.monitor_weight),
+                                    prefixIcon: Icon(Icons.monitor_weight),
                                     border: OutlineInputBorder(
                                       borderRadius: BorderRadius.circular(8),
                                     ),
+                                  ),
+                                  validator: (value) {
+                                    if (value == null || value.isEmpty) {
+                                      return 'Gerekli';
+                                    }
+                                    return null;
+                                  },
+                                ),
                               ),
-                              validator: (value) {
-                                if (value == null || value.isEmpty) {
-                                  return 'Gerekli';
-                                }
-                                return null;
-                              },
-                            ),
+                            ],
                           ),
                         ],
                       ),
-                    ],
+                    ),
                   ),
-                ),
-              ),
 
                   SizedBox(height: 16),
 
                   // Fitness bilgileri
-              Card(
+                  Card(
                     elevation: 2,
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(12),
                     ),
-                child: Padding(
+                    child: Padding(
                       padding: EdgeInsets.all(16),
-                  child: Column(
+                      child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
+                        children: [
                           Text(
                             'Fitness Bilgileri',
                             style: TextStyle(
@@ -282,7 +277,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
                             ),
                           ),
                           SizedBox(height: 16),
-                          
                           DropdownButtonFormField<String>(
                             value: _fitnessLevel,
                             decoration: InputDecoration(
@@ -292,7 +286,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                 borderRadius: BorderRadius.circular(8),
                               ),
                             ),
-                            items: ['Başlangıç', 'Orta', 'İleri'].map((String value) {
+                            items: ['Başlangıç', 'Orta', 'İleri']
+                                .map((String value) {
                               return DropdownMenuItem<String>(
                                 value: value,
                                 child: Text(value),
@@ -304,9 +299,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                               });
                             },
                           ),
-                          
                           SizedBox(height: 16),
-                          
                           DropdownButtonFormField<String>(
                             value: _activityLevel,
                             decoration: InputDecoration(
@@ -325,31 +318,32 @@ class _ProfileScreenState extends State<ProfileScreen> {
                             ].map((String value) {
                               return DropdownMenuItem<String>(
                                 value: value,
-                                child: Text(value, style: TextStyle(fontSize: 14)),
+                                child:
+                                    Text(value, style: TextStyle(fontSize: 14)),
                               );
                             }).toList(),
-                        onChanged: (value) {
+                            onChanged: (value) {
                               setState(() {
                                 _activityLevel = value!;
                               });
-                        },
+                            },
+                          ),
+                        ],
                       ),
-                    ],
+                    ),
                   ),
-                ),
-              ),
 
                   SizedBox(height: 16),
 
                   // Hedefler
-              Card(
+                  Card(
                     elevation: 2,
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(12),
                     ),
-                child: Padding(
+                    child: Padding(
                       padding: EdgeInsets.all(16),
-                  child: Column(
+                      child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text(
@@ -361,7 +355,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                             ),
                           ),
                           SizedBox(height: 16),
-                          
+
                           DropdownButtonFormField<String>(
                             value: _primaryGoal,
                             decoration: InputDecoration(
@@ -372,9 +366,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
                               ),
                             ),
                             items: [
-                              'Kilo Verme',
-                              'Kas Kazanma',
-                              'Kilo Alma',
+                              'Kas + Kilo Alma',
+                              'Kas Kazanma + Kilo Verme',
                               'Bakım',
                               'Güç Kazanma',
                               'Dayanıklılık'
@@ -387,50 +380,19 @@ class _ProfileScreenState extends State<ProfileScreen> {
                             onChanged: (value) {
                               setState(() {
                                 _primaryGoal = value!;
-                                // Kilo verme seçilince kas koruma seçeneği göster
-                                // State'i koru - checkbox kaybolmasın
-                                if (_primaryGoal != 'Kilo Verme') {
-                                  _preserveMuscle = false;
-                                }
+                                // Yeni hedefler için kas koruma seçeneği gösterme
+                                _preserveMuscle = false;
                               });
                             },
                           ),
-                          
-                          // Kas kütlesi koruma seçeneği (kilo verme seçiliyse göster)
-                          if (_primaryGoal == 'Kilo Verme') ...[
-                            SizedBox(height: 16),
-                            Container(
-                              decoration: BoxDecoration(
-                                color: Colors.amber.shade50,
-                                borderRadius: BorderRadius.circular(8),
-                                border: Border.all(color: Colors.amber.shade200),
-                              ),
-                              child: CheckboxListTile(
-                                title: Text(
-                                  'Kas Kütlesini Korumak İstiyorum',
-                                  style: TextStyle(fontWeight: FontWeight.bold),
-                                ),
-                                subtitle: Text(
-                                  'Yavaş kilo verme, yüksek protein, ağırlık antrenmanı',
-                                  style: TextStyle(fontSize: 12),
-                                ),
-                                value: _preserveMuscle,
-                                activeColor: Colors.green,
-                                onChanged: (value) {
-                                  setState(() {
-                                    _preserveMuscle = value ?? false;
-                                  });
-                                },
-                              ),
-                            ),
-                          ],
+
                         ],
                       ),
                     ),
                   ),
-                  
+
                   SizedBox(height: 16),
-                  
+
                   // Antrenman ve Diyet
                   Card(
                     elevation: 2,
@@ -451,7 +413,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                             ),
                           ),
                           SizedBox(height: 16),
-                          
+
                           // Antrenman günleri slider
                           Container(
                             padding: EdgeInsets.all(12),
@@ -463,11 +425,13 @@ class _ProfileScreenState extends State<ProfileScreen> {
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
                                 Row(
-                                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
+                                  mainAxisAlignment:
+                                      MainAxisAlignment.spaceBetween,
+                                  children: [
                                     Text(
                                       'Haftalık Antrenman',
-                                      style: TextStyle(fontWeight: FontWeight.bold),
+                                      style: TextStyle(
+                                          fontWeight: FontWeight.bold),
                                     ),
                                     Container(
                                       padding: EdgeInsets.symmetric(
@@ -496,11 +460,11 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                   activeColor: Colors.deepPurple,
                                   label: '$_workoutDays gün',
                                   onChanged: (value) {
-                          setState(() {
+                                    setState(() {
                                       _workoutDays = value.round();
-                          });
-                        },
-                      ),
+                                    });
+                                  },
+                                ),
                                 Text(
                                   _getWorkoutSplitInfo(),
                                   style: TextStyle(
@@ -511,9 +475,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
                               ],
                             ),
                           ),
-                          
+
                           SizedBox(height: 16),
-                          
+
                           DropdownButtonFormField<String>(
                             value: _dietType,
                             decoration: InputDecoration(
@@ -522,7 +486,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
                               border: OutlineInputBorder(
                                 borderRadius: BorderRadius.circular(8),
                               ),
-                              helperText: 'Beslenme planınız bu tercihe göre oluşturulacak',
+                              helperText:
+                                  'Beslenme planınız bu tercihe göre oluşturulacak',
                             ),
                             items: [
                               'Dengeli',
@@ -538,21 +503,21 @@ class _ProfileScreenState extends State<ProfileScreen> {
                               );
                             }).toList(),
                             onChanged: (value) {
-                          setState(() {
+                              setState(() {
                                 _dietType = value!;
-                          });
-                        },
+                              });
+                            },
+                          ),
+                        ],
                       ),
-                    ],
+                    ),
                   ),
-                ),
-              ),
 
                   SizedBox(height: 24),
-                  
+
                   // Kaydet butonu
                   ElevatedButton(
-                  onPressed: _saveProfile,
+                    onPressed: _saveProfile,
                     style: ElevatedButton.styleFrom(
                       backgroundColor: Colors.deepPurple,
                       padding: EdgeInsets.symmetric(vertical: 16),
@@ -577,7 +542,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                       ],
                     ),
                   ),
-                  
+
                   SizedBox(height: 20),
                 ],
               ),
@@ -602,7 +567,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
         return '';
     }
   }
-  
+
   Future<void> _saveProfile() async {
     if (_formKey.currentState!.validate()) {
       // Profil nesnesini oluştur
@@ -619,12 +584,12 @@ class _ProfileScreenState extends State<ProfileScreen> {
         'workout_days': _workoutDays,
         'diet_type': _dietType,
       };
-      
+
       // SharedPreferences'a kaydet
       try {
         final prefs = await SharedPreferences.getInstance();
         await prefs.setString('user_profile', jsonEncode(profile));
-        
+
         // Başarı mesajı göster
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
@@ -633,12 +598,13 @@ class _ProfileScreenState extends State<ProfileScreen> {
             duration: Duration(seconds: 2),
           ),
         );
-        
+
         // Plan seçim ekranına git
         Navigator.push(
           context,
           MaterialPageRoute(
-            builder: (context) => PlanSelectionScreen(profile: UserProfile(
+            builder: (context) => PlanSelectionScreen(
+                profile: UserProfile(
               sex: _gender == 'Erkek' ? 'male' : 'female',
               age: int.parse(_ageController.text),
               heightCm: int.parse(_heightController.text),
@@ -655,7 +621,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
             )),
           ),
         );
-        
       } catch (e) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(

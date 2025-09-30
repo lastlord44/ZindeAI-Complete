@@ -204,15 +204,15 @@ class _MealPlanScreenState extends State<MealPlanScreen> {
 
     try {
       final apiService = context.read<ApiService>();
-      final result = await apiService.createMealPlan(
-        calories: _calories,
-        goal: _goal,
-        diet: _diet,
-        daysPerWeek: _daysPerWeek, // YENİ
-      );
+      final result = await apiService.generateMealPlan({
+        'calories': _calories,
+        'goal': _goal,
+        'diet': _diet,
+        'daysPerWeek': _daysPerWeek,
+      });
 
       setState(() {
-        _result = result;
+        _result = result as MealPlan?;
         _isLoading = false;
       });
     } catch (e) {

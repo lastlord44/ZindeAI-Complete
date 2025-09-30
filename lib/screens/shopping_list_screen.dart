@@ -31,46 +31,65 @@ class _ShoppingListScreenState extends State<ShoppingListScreen> {
     final days = widget.mealPlan['days'] as List<dynamic>?;
 
     if (days == null || days.isEmpty) {
-      // Veri yoksa boş liste göster
       setState(() {});
       return;
     }
 
-    // Seçili günlerdeki yemekleri topla
+    // Seçili günlerdeki yemekleri topla (meals artık Map yapısında)
     for (int dayIndex in selectedDays) {
       if (dayIndex >= days.length) continue;
 
       final day = days[dayIndex] as Map<String, dynamic>;
-      final meals = day['meals'] as List<dynamic>? ?? [];
+      final meals = (day['meals'] as Map<String, dynamic>?) ?? {};
 
-      for (var meal in meals) {
+      final mealKeys = const [
+        'sabah',
+        'ara_ogun_1',
+        'ogle',
+        'ara_ogun_2',
+        'aksam'
+      ];
+      for (final key in mealKeys) {
+        final meal = meals[key] as Map<String, dynamic>?;
+        if (meal == null) continue;
+
         final ingredients = meal['ingredients'] as List<dynamic>? ?? [];
+        for (final raw in ingredients) {
+          final ingredient = raw as Map<String, dynamic>? ?? {};
+          final name = (ingredient['name'] ?? '').toString();
+          final rawAmount = (ingredient['amount'] ?? '').toString();
+          if (name.isEmpty || rawAmount.isEmpty) continue;
 
-        for (var ingredient in ingredients) {
-          final name = ingredient['name']?.toString() ?? '';
-          final amount = ingredient['amount']?.toString() ?? '0';
-          final unit = ingredient['unit']?.toString() ?? '';
+          // "120 g" gibi değerleri ayır
+          double numericAmount = 0;
+          String unit = '';
+          final match =
+              RegExp(r'^\s*([\d\.,]+)\s*(.*)\s*$').firstMatch(rawAmount);
+          if (match != null) {
+            numericAmount =
+                double.tryParse(match.group(1)!.replaceAll(',', '.')) ?? 0;
+            unit = match.group(2)!.trim();
+          } else {
+            // Sayı yoksa tümünü birim gibi göster
+            unit = rawAmount;
+          }
 
-          if (name.isEmpty) continue;
-
-          // Malzemeyi kategorize et
           final category = _categorizeIngredient(name.toLowerCase());
 
-          // Miktarları topla
-          if (groceryItems.containsKey(name)) {
+          if (groceryItems.containsKey(name) &&
+              (groceryItems[name]!['unit'] as String? ?? '') == unit) {
             final existing = groceryItems[name]!;
             final existingAmount =
                 double.tryParse(existing['amount'].toString()) ?? 0;
-            final newAmount = double.tryParse(amount) ?? 0;
-
             groceryItems[name] = {
-              'amount': (existingAmount + newAmount).toString(),
+              'amount': (existingAmount + numericAmount).toString(),
               'unit': unit,
               'category': category,
             };
           } else {
             groceryItems[name] = {
-              'amount': amount,
+              'amount':
+                  numericAmount == 0 ? rawAmount : numericAmount.toString(),
               'unit': unit,
               'category': category,
             };
@@ -242,7 +261,9 @@ class _ShoppingListScreenState extends State<ShoppingListScreen> {
                         child: Row(
                           children: List.generate(days.length, (index) {
                             final day = days[index] as Map<String, dynamic>;
-                            final dayName = day['day'] ?? 'Gün ${index + 1}';
+                            final dayName = (day['dayName'] ??
+                                    'Gün ${day['day'] ?? (index + 1)}')
+                                .toString();
                             final isSelected = selectedDays.contains(index);
 
                             return Padding(

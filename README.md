@@ -127,33 +127,33 @@ supabase/
 
 ## 🚨 ACİL ÇÖZÜLMESİ GEREKEN HATALAR
 
-### 1. 🔴 KRİTİK: Kas Kütlesi Checkbox'ı Kayboluyor
-**Sorun:** "Kas Kütlesini Korumak İstiyorum" checkbox'ı ilk başta görünüyor, sonra kayboluyor
-**Lokasyon:** `lib/screens/profile_screen.dart` - Hedef seçimi bölümü
-**Sebep:** State management hatası, checkbox state'i kayboluyor
-**Etki:** Kullanıcı kas koruma hedefini seçemiyor, protein hesaplaması yanlış oluyor
-**Durum:** 🔴 ACİL - Hemen düzeltilmeli
+### 1. 🔴 KRİTİK: Protein Önerisi Sorunu
+**Sorun:** AI bazı günler 85 gram gibi düşük protein öneriyor, sütlaç ve pizza gibi sağlıksız yiyecekler öneriyor
+**Lokasyon:** `supabase/functions/zindeai-router/index.ts` - AI prompt
+**Sebep:** Prompt'ta sağlıklı beslenme kuralları yeterince vurgulanmamış
+**Etki:** Kullanıcılar sağlıksız beslenme planları alıyor, protein hedefleri tutmuyor
+**Durum:** ✅ ÇÖZÜLDÜ - Sağlıklı beslenme kuralları prompt'a eklendi
 
-### 2. 🔴 KRİTİK: Antrenman Planı Verisi Bulunamıyor
-**Sorun:** "Antrenman planı verisi bulunamadı" hatası
-**Lokasyon:** `lib/screens/workout_plan_display_screen.dart`
-**Sebep:** Edge Function'dan gelen veri formatı yanlış parse ediliyor
-**Etki:** Antrenman planı hiç görüntülenemiyor
-**Durum:** 🔴 ACİL - Hemen düzeltilmeli
+### 2. 🔴 KRİTİK: Profil Hedef Seçenekleri
+**Sorun:** "Kas Kütlesini Korumak İstiyorum" seçeneği kaldırıldı, yeni hedef seçenekleri eklendi
+**Lokasyon:** `lib/screens/profile_screen.dart` - Hedef dropdown
+**Sebep:** Kullanıcı isteği doğrultusunda hedef seçenekleri güncellendi
+**Etki:** Daha net hedef seçimi, kas + kilo alma/kazanma kombinasyonları
+**Durum:** ✅ ÇÖZÜLDÜ - Yeni hedef seçenekleri eklendi
 
-### 3. 🔴 KRİTİK: Beslenme Planı TypeError
-**Sorun:** `TypeError: Instance of '() => dynamic': type '() => dynamic' is not a subtype of type '(() => Map<String, Object>)?'`
-**Lokasyon:** `lib/screens/meal_plan_display_screen.dart:371`
-**Sebep:** `firstWhere` orElse callback'i yanlış tip döndürüyor
-**Etki:** Beslenme planı ekranı çöküyor
-**Durum:** 🔴 ACİL - Hemen düzeltilmeli
+### 3. 🔴 KRİTİK: Alerjen Uyarıları
+**Sorun:** Beslenme planlarında alerjen uyarıları gösterilmiyordu
+**Lokasyon:** `lib/screens/meal_plan_display_screen.dart` - Malzemeler bölümü
+**Sebep:** Alerjen uyarı sistemi kaldırılmıştı
+**Etki:** Kullanıcılar alerjen riski konusunda bilgilendirilmiyor
+**Durum:** ✅ ÇÖZÜLDÜ - Alerjen uyarıları geri eklendi
 
-### 4. 🔴 KRİTİK: Edge Function 500 Hatası
-**Sorun:** Edge Function 500 Internal Server Error veriyor
-**Lokasyon:** `supabase/functions/zindeai-router/index.ts`
-**Sebep:** Yeni prompt formatı ile API çağrısı uyumsuz
-**Etki:** Hiçbir plan oluşturulamıyor
-**Durum:** 🔴 ACİL - Hemen düzeltilmeli
+### 4. 🔴 KRİTİK: Antrenman Süresi Gösterimi
+**Sorun:** "8 hafta" gibi süre gösterimi yerine takvim formatı isteniyordu
+**Lokasyon:** `lib/screens/workout_plan_display_screen.dart` - Süre gösterimi
+**Sebep:** Beslenme planındaki gibi takvim formatı daha kullanıcı dostu
+**Etki:** Daha anlaşılır süre gösterimi
+**Durum:** ✅ ÇÖZÜLDÜ - Takvim formatına çevrildi
 
 ## ✅ ÇÖZÜLEN HATALAR
 

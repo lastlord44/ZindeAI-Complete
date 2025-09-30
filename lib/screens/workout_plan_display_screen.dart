@@ -1,16 +1,9 @@
-// ============================================
-// 5. WORKOUT PLAN DISPLAY SCREEN DÜZELTMESİ
-// lib/screens/workout_plan_display_screen.dart
-// ============================================
-
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 
 class WorkoutPlanDisplayScreen extends StatefulWidget {
-  final Map<String, dynamic> workoutPlanData;
+  final Map<String, dynamic> workoutPlan;
 
-  const WorkoutPlanDisplayScreen({Key? key, required this.workoutPlanData})
-      : super(key: key);
+  WorkoutPlanDisplayScreen({required this.workoutPlan});
 
   @override
   _WorkoutPlanDisplayScreenState createState() =>
@@ -18,508 +11,349 @@ class WorkoutPlanDisplayScreen extends StatefulWidget {
 }
 
 class _WorkoutPlanDisplayScreenState extends State<WorkoutPlanDisplayScreen> {
-  late int _selectedDay;
-  Map<String, Map<String, bool>> _exerciseCompletion =
-      {}; // day -> exercise -> completed
+  int selectedDayIndex = 0;
 
-  @override
-  void initState() {
-    super.initState();
-    // Bugünün gününü belirle (0-indexed)
-    _selectedDay = 0; // Default olarak ilk gün
-    _initializeExerciseCompletion();
-  }
-
-  void _initializeExerciseCompletion() {
-    final workoutPlan = widget.workoutPlanData['workoutPlan'];
-    if (workoutPlan != null && workoutPlan['days'] != null) {
-      for (var day in workoutPlan['days']) {
-        String dayKey = 'day_${day['day']}';
-        _exerciseCompletion[dayKey] = {};
-        for (var exercise in day['exercises']) {
-          _exerciseCompletion[dayKey]![exercise['name']] = false;
-        }
-      }
+  String _formatDuration(String? duration) {
+    if (duration == null) return '8 hafta';
+    
+    // Eğer "8 hafta" formatındaysa, takvim formatına çevir
+    if (duration.contains('hafta')) {
+      final weeks = int.tryParse(duration.split(' ')[0]) ?? 8;
+      final startDate = DateTime.now();
+      final endDate = startDate.add(Duration(days: weeks * 7));
+      
+      return '${startDate.day}/${startDate.month} - ${endDate.day}/${endDate.month}';
     }
-  }
-
-  Map<String, dynamic>? _getCurrentDayData() {
-    try {
-      // Farklı veri formatlarını kontrol et
-      final workoutPlan = widget.workoutPlanData['workoutPlan'] ?? 
-                         widget.workoutPlanData['trainingPlan'] ?? 
-                         widget.workoutPlanData;
-      
-      if (workoutPlan == null) return null;
-      
-      // Days array'ini farklı yerlerden bul
-      final days = workoutPlan['days'] ?? 
-                  workoutPlan['weekly_schedule'] ?? 
-                  workoutPlan['workouts'];
-      
-      if (days == null || days is! List || days.isEmpty) return null;
-
-      // Seçili günü bul
-      final currentDay = days.firstWhere(
-        (day) => day['day'] == _selectedDay + 1,
-        orElse: () => null,
-      );
-
-      return currentDay as Map<String, dynamic>?;
-    } catch (e) {
-      print('Error getting current day data: $e');
-      return null;
-    }
+    
+    return duration;
   }
 
   @override
   Widget build(BuildContext context) {
-    final workoutPlan = widget.workoutPlanData['workoutPlan'];
-    final dayData = _getCurrentDayData();
+    // trainingPlan objesini al
+    final trainingPlan =
+        widget.workoutPlan['trainingPlan'] ?? widget.workoutPlan;
+    final days = trainingPlan['days'] ?? [];
 
-    if (workoutPlan == null || dayData == null) {
-    return Scaffold(
-      appBar: AppBar(
-          title: Text('Antrenman Planı'),
-        ),
+    if (days.isEmpty) {
+      return Scaffold(
+        appBar: AppBar(title: Text('Antrenman Planı')),
         body: Center(
-          child: Text('Antrenman planı verisi bulunamadı'),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(Icons.error_outline, size: 64, color: Colors.red),
+              SizedBox(height: 16),
+              Text('Antrenman planı yüklenemedi'),
+              Text('Lütfen tekrar deneyin',
+                  style: TextStyle(color: Colors.grey)),
+            ],
+          ),
         ),
       );
     }
 
+    final currentDay = days[selectedDayIndex];
+
     return Scaffold(
       appBar: AppBar(
-        title: Text('Antrenman Planı'),
-        backgroundColor: Theme.of(context).primaryColor,
-        elevation: 0,
-        actions: [
-          IconButton(
-            icon: Icon(Icons.info_outline),
-            onPressed: () => _showPlanInfo(workoutPlan),
-          ),
-        ],
+        title: Text(trainingPlan['programName'] ?? 'Antrenman Programı'),
+        backgroundColor: Colors.blue,
       ),
       body: Column(
         children: [
-          // Plan Başlığı
+          // Program bilgileri
           Container(
-            width: double.infinity,
             padding: EdgeInsets.all(16),
-            decoration: BoxDecoration(
-              gradient: LinearGradient(
-                colors: [
-                  Theme.of(context).primaryColor,
-                  Theme.of(context).primaryColor.withOpacity(0.8),
-                ],
-                begin: Alignment.topCenter,
-                end: Alignment.bottomCenter,
-              ),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-                  workoutPlan['planName'] ?? 'Antrenman Programı',
-                  style: TextStyle(
-              fontSize: 24,
-              fontWeight: FontWeight.bold,
-              color: Colors.white,
-            ),
-          ),
-                SizedBox(height: 8),
-          Row(
-            children: [
-                    Icon(Icons.calendar_today, size: 16, color: Colors.white70),
-                    SizedBox(width: 4),
-                    Text(
-                      'Haftalık ${workoutPlan['weeklyFrequency']} gün',
-                      style: TextStyle(color: Colors.white70),
-                    ),
-                    SizedBox(width: 16),
-                    Icon(Icons.fitness_center, size: 16, color: Colors.white70),
-                    SizedBox(width: 4),
-                    Text(
-                      workoutPlan['programType'] ?? '',
-                      style: TextStyle(color: Colors.white70),
-                    ),
+            color: Colors.blue[50],
+            child: Column(
+              children: [
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceAround,
+                  children: [
+                    _buildInfoChip(
+                        'Seviye', trainingPlan['level'] ?? 'Beginner'),
+                    _buildInfoChip(
+                        'Süre', _formatDuration(trainingPlan['duration'])),
+                    _buildInfoChip(
+                        'Sıklık', '${trainingPlan['frequency'] ?? 3} gün'),
+                    _buildInfoChip(
+                        'Split', trainingPlan['split'] ?? 'Full Body'),
                   ],
                 ),
               ],
             ),
           ),
 
-          // Gün Seçici
-          _buildDaySelector(workoutPlan['days']),
-
-          // Gün Başlığı
+          // Gün seçici
           Container(
-            width: double.infinity,
-            padding: EdgeInsets.all(16),
-            color: Colors.grey[100],
-            child: Text(
-              dayData['name'] ?? 'Antrenman Günü',
-              style: TextStyle(
-                fontSize: 20,
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-          ),
-
-          // Egzersizler Listesi
-          Expanded(
+            height: 60,
             child: ListView.builder(
-              padding: EdgeInsets.only(bottom: 20),
-              itemCount: (dayData['exercises'] as List).length,
+              scrollDirection: Axis.horizontal,
+              itemCount: days.length,
               itemBuilder: (context, index) {
-                final exercise = dayData['exercises'][index];
-                return _buildExerciseCard(exercise, 'day_${dayData['day']}');
+                final day = days[index];
+                final isSelected = index == selectedDayIndex;
+
+                return GestureDetector(
+                  onTap: () {
+                    setState(() {
+                      selectedDayIndex = index;
+                    });
+                  },
+                  child: Container(
+                    margin: EdgeInsets.all(8),
+                    padding: EdgeInsets.symmetric(horizontal: 16),
+                    decoration: BoxDecoration(
+                      color: isSelected ? Colors.blue : Colors.grey[300],
+                      borderRadius: BorderRadius.circular(20),
+                    ),
+                    child: Center(
+                      child: Text(
+                        'Gün ${day['day']}',
+                        style: TextStyle(
+                          color: isSelected ? Colors.white : Colors.black,
+                          fontWeight:
+                              isSelected ? FontWeight.bold : FontWeight.normal,
+                        ),
+                      ),
+                    ),
+                  ),
+                );
               },
             ),
           ),
+
+          // Günün detayları
+          Container(
+            padding: EdgeInsets.all(16),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  currentDay['name'] ?? 'Antrenman Günü',
+                  style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+                ),
+                SizedBox(height: 4),
+                Text(
+                  'Odak: ${currentDay['focus'] ?? 'Genel'}',
+                  style: TextStyle(color: Colors.grey[600]),
+                ),
+                SizedBox(height: 8),
+                Container(
+                  padding: EdgeInsets.all(8),
+                  decoration: BoxDecoration(
+                    color: Colors.orange[50],
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Row(
+                    children: [
+                      Icon(Icons.warning_amber_rounded,
+                          color: Colors.orange, size: 20),
+                      SizedBox(width: 8),
+                      Expanded(
+                        child: Text(
+                          'Isınma: ${currentDay['warmup'] ?? '5-10 dk hafif kardiyo'}',
+                          style: TextStyle(fontSize: 12),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
+
+          // Egzersizler listesi
+          Expanded(
+            child: ListView.builder(
+              padding: EdgeInsets.symmetric(horizontal: 16),
+              itemCount: (currentDay['exercises'] ?? []).length,
+              itemBuilder: (context, index) {
+                final exercise = currentDay['exercises'][index];
+                return _buildExerciseCard(exercise, index + 1);
+              },
+            ),
+          ),
+
+          // Soğuma bilgisi
+          if (currentDay['cooldown'] != null)
+            Container(
+              margin: EdgeInsets.all(16),
+              padding: EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: Colors.blue[50],
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: Row(
+                children: [
+                  Icon(Icons.self_improvement, color: Colors.blue, size: 20),
+                  SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      'Soğuma: ${currentDay['cooldown']}',
+                      style: TextStyle(fontSize: 12),
+                    ),
+                  ),
+                ],
+              ),
+            ),
         ],
       ),
     );
   }
 
-  Widget _buildDaySelector(List days) {
-    return Container(
-      height: 80,
-      child: ListView.builder(
-        scrollDirection: Axis.horizontal,
-        padding: EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-        itemCount: days.length,
-        itemBuilder: (context, index) {
-          final day = days[index];
-          bool isSelected = _selectedDay == index;
+  Widget _buildInfoChip(String label, String value) {
+    return Column(
+      children: [
+        Text(label, style: TextStyle(fontSize: 11, color: Colors.grey[600])),
+        SizedBox(height: 4),
+        Container(
+          padding: EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(12),
+          ),
+          child: Text(
+            value,
+            style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold),
+          ),
+        ),
+      ],
+    );
+  }
 
-          return GestureDetector(
-            onTap: () {
-              setState(() => _selectedDay = index);
-              HapticFeedback.selectionClick();
-            },
-            child: Container(
-              width: 100,
-              margin: EdgeInsets.only(right: 12),
-      decoration: BoxDecoration(
-                color:
-                    isSelected ? Theme.of(context).primaryColor : Colors.white,
-        borderRadius: BorderRadius.circular(12),
-                border: Border.all(
-                  color: isSelected
-                      ? Theme.of(context).primaryColor
-                      : Colors.grey[300]!,
-                  width: 2,
-                ),
-                boxShadow: isSelected
-                    ? [
-                        BoxShadow(
-                          color:
-                              Theme.of(context).primaryColor.withOpacity(0.3),
-                          blurRadius: 8,
-                          offset: Offset(0, 4),
-                        ),
-                      ]
-                    : [],
-              ),
-              child: Center(
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
+  Widget _buildExerciseCard(Map<String, dynamic> exercise, int orderNumber) {
+    return Card(
+      margin: EdgeInsets.only(bottom: 12),
+      elevation: 3,
+      child: ExpansionTile(
+        leading: CircleAvatar(
+          backgroundColor: Colors.blue,
+          child: Text(
+            '$orderNumber',
+            style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+          ),
+        ),
+        title: Text(
+          exercise['name'] ?? 'Egzersiz',
+          style: TextStyle(fontWeight: FontWeight.bold),
+        ),
+        subtitle: Text(
+          exercise['targetMuscle'] ?? '',
+          style: TextStyle(fontSize: 12, color: Colors.grey[600]),
+        ),
+        children: [
+          Padding(
+            padding: EdgeInsets.all(16),
+            child: Column(
+              children: [
+                // Set ve tekrar bilgisi
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceAround,
                   children: [
-                    Text(
-                      'Gün ${day['day']}',
-                      style: TextStyle(
-                        color: isSelected ? Colors.white : Colors.black87,
-                        fontWeight: FontWeight.bold,
-                        fontSize: 16,
-                      ),
+                    _buildExerciseDetail(
+                      Icons.repeat,
+                      '${exercise['sets'] ?? 3} set',
+                      Colors.blue,
                     ),
-                    SizedBox(height: 4),
-                    Text(
-                      '${(day['exercises'] as List).length} egzersiz',
-                      style: TextStyle(
-                        color: isSelected ? Colors.white70 : Colors.grey,
-                        fontSize: 12,
-                      ),
+                    _buildExerciseDetail(
+                      Icons.fitness_center,
+                      '${exercise['reps'] ?? '8-10'} tekrar',
+                      Colors.green,
+                    ),
+                    _buildExerciseDetail(
+                      Icons.timer,
+                      '${exercise['rest'] ?? 90}sn',
+                      Colors.orange,
+                    ),
+                    _buildExerciseDetail(
+                      Icons.speed,
+                      'RPE ${exercise['rpe'] ?? 7}',
+                      Colors.red,
                     ),
                   ],
                 ),
-              ),
-                ),
-              );
-        },
+
+                // Tempo bilgisi
+                if (exercise['tempo'] != null)
+                  Container(
+                    margin: EdgeInsets.only(top: 12),
+                    padding: EdgeInsets.all(8),
+                    decoration: BoxDecoration(
+                      color: Colors.grey[100],
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: Row(
+                      children: [
+                        Icon(Icons.music_note,
+                            size: 16, color: Colors.grey[600]),
+                        SizedBox(width: 8),
+                        Text(
+                          'Tempo: ${exercise['tempo']}',
+                          style: TextStyle(fontSize: 12),
+                        ),
+                      ],
+                    ),
+                  ),
+
+                // Form ipucu
+                if (exercise['formTip'] != null)
+                  Container(
+                    margin: EdgeInsets.only(top: 12),
+                    padding: EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: Colors.yellow[50],
+                      borderRadius: BorderRadius.circular(8),
+                      border: Border.all(
+                          color: Colors.yellow[700]!.withOpacity(0.3)),
+                    ),
+                    child: Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Icon(Icons.lightbulb_outline,
+                            size: 16, color: Colors.yellow[700]),
+                        SizedBox(width: 8),
+                        Expanded(
+                          child: Text(
+                            exercise['formTip'],
+                            style: TextStyle(fontSize: 12),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+
+                // Notlar
+                if (exercise['notes'] != null)
+                  Container(
+                    margin: EdgeInsets.only(top: 8),
+                    child: Text(
+                      exercise['notes'],
+                      style: TextStyle(
+                          fontSize: 11,
+                          color: Colors.grey[600],
+                          fontStyle: FontStyle.italic),
+                    ),
+                  ),
+              ],
+            ),
+          ),
+        ],
       ),
     );
   }
 
-  Widget _buildExerciseCard(Map<String, dynamic> exercise, String dayKey) {
-    bool isCompleted = _exerciseCompletion[dayKey]?[exercise['name']] ?? false;
-
-    return Card(
-      margin: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-      elevation: 3,
-      child: Theme(
-        data: Theme.of(context).copyWith(dividerColor: Colors.transparent),
-        child: ExpansionTile(
-          tilePadding: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-          leading: Checkbox(
-            value: isCompleted,
-            onChanged: (value) {
-              setState(() {
-                _exerciseCompletion[dayKey]![exercise['name']] = value ?? false;
-              });
-              if (value == true) {
-                HapticFeedback.mediumImpact();
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(
-                    content: Text('${exercise['name']} tamamlandı! 💪'),
-                    duration: Duration(seconds: 2),
-                    backgroundColor: Colors.green,
-                  ),
-                );
-              }
-            },
-            activeColor: Colors.green,
-          ),
-          title: Text(
-            exercise['name'] ?? 'Egzersiz',
-            style: TextStyle(
-              fontSize: 18,
-              fontWeight: FontWeight.bold,
-              decoration: isCompleted ? TextDecoration.lineThrough : null,
-              color: isCompleted ? Colors.grey : Colors.black87,
-            ),
-          ),
-          subtitle: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              SizedBox(height: 8),
-              Row(
-                children: [
-                  _buildExerciseInfo(Icons.repeat, '${exercise['sets']} set'),
-                  SizedBox(width: 16),
-                  _buildExerciseInfo(Icons.fitness_center, exercise['reps']),
-                  SizedBox(width: 16),
-                  _buildExerciseInfo(Icons.timer, exercise['restTime']),
-                ],
-              ),
-              SizedBox(height: 8),
-              // RPE (Zorluk) Göstergesi
-              Row(
-                children: [
-                  Text('Zorluk: ',
-                      style: TextStyle(fontWeight: FontWeight.w500)),
-                  ...List.generate(10, (index) {
-                    return Icon(
-                      Icons.circle,
-                      size: 12,
-                      color: index < (exercise['rpe'] ?? 7)
-                          ? _getRPEColor(exercise['rpe'] ?? 7)
-                          : Colors.grey[300],
-                    );
-                  }),
-                  SizedBox(width: 8),
-                  Text(
-                    'RPE ${exercise['rpe'] ?? 7}/10',
-                    style: TextStyle(
-                      fontSize: 12,
-                      color: _getRPEColor(exercise['rpe'] ?? 7),
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                ],
-              ),
-            ],
-          ),
-          children: [
-            Padding(
-              padding: EdgeInsets.all(16),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  // Hedef Kaslar
-                  if (exercise['targetMuscles'] != null)
-                    _buildDetailSection(
-                      'Hedef Kaslar',
-                      Icons.accessibility_new,
-                      Wrap(
-                        spacing: 8,
-                        children:
-                            (exercise['targetMuscles'] as List).map((muscle) {
-                          return Chip(
-                            label: Text(
-                              muscle,
-                              style: TextStyle(fontSize: 12),
-                            ),
-                            backgroundColor: Colors.blue[50],
-                          );
-                        }).toList(),
-                      ),
-                    ),
-
-                  SizedBox(height: 16),
-
-                  // Doğru Form İpuçları
-                  if (exercise['executionTips'] != null)
-                    _buildDetailSection(
-                      'Doğru Form İçin İpuçları',
-                      Icons.check_circle_outline,
-                      Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children:
-                            (exercise['executionTips'] as List).map((tip) {
-                          return Padding(
-                            padding: EdgeInsets.only(bottom: 8),
-                            child: Row(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Icon(Icons.check,
-                                    size: 16, color: Colors.green),
-                                SizedBox(width: 8),
-                                Expanded(
-                                  child: Text(
-                                    tip,
-                                    style: TextStyle(fontSize: 14),
-                                  ),
-                                ),
-                              ],
-                            ),
-                          );
-                        }).toList(),
-                      ),
-                    ),
-
-                  SizedBox(height: 16),
-
-                  // Sık Yapılan Hatalar
-                  if (exercise['commonMistakes'] != null)
-                    _buildDetailSection(
-                      'Sık Yapılan Hatalar',
-                      Icons.warning_amber_outlined,
-                      Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children:
-                            (exercise['commonMistakes'] as List).map((mistake) {
-                          return Padding(
-                            padding: EdgeInsets.only(bottom: 8),
-                            child: Row(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Icon(Icons.close, size: 16, color: Colors.red),
-                                SizedBox(width: 8),
-                                Expanded(
-                                  child: Text(
-                                    mistake,
-                                    style: TextStyle(fontSize: 14),
-                                  ),
-                                ),
-                              ],
-                            ),
-                          );
-                        }).toList(),
-                      ),
-                    ),
-                ],
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildExerciseInfo(IconData icon, String text) {
-    return Row(
+  Widget _buildExerciseDetail(IconData icon, String text, Color color) {
+    return Column(
       children: [
-        Icon(icon, size: 16, color: Colors.grey[600]),
-        SizedBox(width: 4),
+        Icon(icon, color: color, size: 20),
+        SizedBox(height: 4),
         Text(
           text,
-          style: TextStyle(fontSize: 14, color: Colors.grey[700]),
+          style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold),
         ),
       ],
-    );
-  }
-
-  Widget _buildDetailSection(String title, IconData icon, Widget content) {
-    return Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Row(
-          children: [
-            Icon(icon, size: 20, color: Theme.of(context).primaryColor),
-            SizedBox(width: 8),
-            Text(
-              title,
-              style: TextStyle(
-                fontSize: 16,
-                fontWeight: FontWeight.bold,
-                color: Theme.of(context).primaryColor,
-              ),
-            ),
-          ],
-        ),
-        SizedBox(height: 8),
-        content,
-      ],
-    );
-  }
-
-  Color _getRPEColor(int rpe) {
-    if (rpe <= 3) return Colors.green;
-    if (rpe <= 5) return Colors.lightGreen;
-    if (rpe <= 7) return Colors.orange;
-    if (rpe <= 9) return Colors.deepOrange;
-    return Colors.red;
-  }
-
-  void _showPlanInfo(Map<String, dynamic> workoutPlan) {
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: Text('Plan Bilgileri'),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            _buildInfoRow(
-                'Program Tipi', workoutPlan['programType'] ?? 'Belirtilmemiş'),
-            _buildInfoRow(
-                'Haftalık Sıklık', '${workoutPlan['weeklyFrequency']} gün'),
-            _buildInfoRow('Hedef', workoutPlan['goal'] ?? 'Belirtilmemiş'),
-            SizedBox(height: 16),
-            Text(
-              'RPE (Rate of Perceived Exertion)',
-              style: TextStyle(fontWeight: FontWeight.bold),
-            ),
-            SizedBox(height: 8),
-            Text('6-7: Orta zorluk'),
-            Text('8-9: Zor'),
-            Text('10: Maksimum efor'),
-          ],
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: Text('Tamam'),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildInfoRow(String label, String value) {
-    return Padding(
-      padding: EdgeInsets.symmetric(vertical: 4),
-      child: Row(
-      children: [
-        Text(
-            '$label: ',
-            style: TextStyle(fontWeight: FontWeight.bold),
-          ),
-          Text(value),
-        ],
-      ),
     );
   }
 }

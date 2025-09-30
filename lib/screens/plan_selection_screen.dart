@@ -1,5 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import '../models/user_profile.dart';
+import '../services/api_service.dart';
+import '../utils/logger.dart';
 import 'meal_plan_display_screen.dart';
 import 'workout_plan_display_screen.dart';
 
@@ -10,6 +13,18 @@ class PlanSelectionScreen extends StatelessWidget {
     super.key,
     required this.profile,
   });
+
+  String _getFitnessLevel() {
+    // Aktivite seviyesine göre fitness level belirle
+    switch (profile.activity) {
+      case 'low':
+        return 'beginner';
+      case 'high':
+        return 'advanced';
+      default:
+        return 'intermediate';
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -43,7 +58,7 @@ class PlanSelectionScreen extends StatelessWidget {
                   Navigator.push(
                     context,
                     MaterialPageRoute(
-                      builder: (_) => MealPlanDisplayScreen(profile: profile),
+                      builder: (_) => MealPlanDisplayScreen(mealPlan: {}),
                     ),
                   );
                 },
@@ -87,14 +102,47 @@ class PlanSelectionScreen extends StatelessWidget {
             Card(
               elevation: 8,
               child: InkWell(
-                onTap: () {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (_) =>
-                          WorkoutPlanDisplayScreen(workoutPlanData: {}),
-                    ),
-                  );
+                onTap: () async {
+                  Logger.info('Antrenman Planı kartına tıklandı',
+                      tag: 'PlanSelection');
+                  // Antrenman planı oluştur
+                  try {
+                    final apiService = context.read<ApiService>();
+                    final workoutPlan = await apiService.generateWorkoutPlan({
+                      'userId': 'user_${DateTime.now().millisecondsSinceEpoch}',
+                      'age': profile.age,
+                      'gender': profile.sex,
+                      'weight': profile.weightKg,
+                      'height': profile.heightCm.toDouble(),
+                      'fitnessLevel': _getFitnessLevel(),
+                      'goal': profile.goal,
+                      'mode': profile.training.mode,
+                      'daysPerWeek': profile.training.daysPerWeek,
+                      'preferredSplit':
+                          profile.training.splitPreference == 'AUTO'
+                              ? null
+                              : profile.training.splitPreference.toLowerCase(),
+                    });
+
+                    if (context.mounted) {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (_) => WorkoutPlanDisplayScreen(
+                              workoutPlan: workoutPlan),
+                        ),
+                      );
+                    }
+                  } catch (e) {
+                    if (context.mounted) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(
+                          content: Text('Antrenman planı oluşturulamadı: $e'),
+                          backgroundColor: Colors.red,
+                        ),
+                      );
+                    }
+                  }
                 },
                 borderRadius: BorderRadius.circular(16),
                 child: Container(
@@ -138,23 +186,78 @@ class PlanSelectionScreen extends StatelessWidget {
               height: 56,
               child: ElevatedButton.icon(
                 onPressed: () async {
-                  // Önce beslenme planını göster
-                  await Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (_) => MealPlanDisplayScreen(profile: profile),
-                    ),
+                  Logger.info('Her İkisini Oluştur butonuna basıldı',
+                      tag: 'PlanSelection');
+                  // Basit loading göstergesi
+                  showDialog(
+                    context: context,
+                    barrierDismissible: false,
+                    builder: (_) =>
+                        const Center(child: CircularProgressIndicator()),
                   );
+                  try {
+                    final apiService = context.read<ApiService>();
 
-                  // Sonra antrenman planını göster
-                  if (context.mounted) {
-                    Navigator.push(
+                    // Beslenme planı oluştur
+                    final mealPlan = await apiService.generateMealPlan({
+                      'weight': profile.weightKg,
+                      'height': profile.heightCm,
+                      'age': profile.age,
+                      'gender': profile.sex == 'male' ? 'Erkek' : 'Kadın',
+                      'primary_goal': profile.goal,
+                      'diet_type': profile.dietFlags.isNotEmpty
+                          ? profile.dietFlags.first
+                          : 'Normal',
+                      'preserve_muscle': profile.goal == 'lose_weight',
+                    });
+
+                    // İlk istek tamamlandı, loading'i kapat
+                    if (context.mounted) Navigator.pop(context);
+                    await Navigator.push(
                       context,
                       MaterialPageRoute(
                         builder: (_) =>
-                            WorkoutPlanDisplayScreen(workoutPlanData: {}),
+                            MealPlanDisplayScreen(mealPlan: mealPlan),
                       ),
                     );
+
+                    // Sonra antrenman planını oluştur
+                    if (context.mounted) {
+                      final workoutPlan = await apiService.generateWorkoutPlan({
+                        'userId':
+                            'user_${DateTime.now().millisecondsSinceEpoch}',
+                        'age': profile.age,
+                        'gender': profile.sex,
+                        'weight': profile.weightKg,
+                        'height': profile.heightCm.toDouble(),
+                        'fitnessLevel': _getFitnessLevel(),
+                        'goal': profile.goal,
+                        'mode': profile.training.mode,
+                        'daysPerWeek': profile.training.daysPerWeek,
+                        'preferredSplit': profile.training.splitPreference ==
+                                'AUTO'
+                            ? null
+                            : profile.training.splitPreference.toLowerCase(),
+                      });
+
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (_) => WorkoutPlanDisplayScreen(
+                              workoutPlan: workoutPlan),
+                        ),
+                      );
+                    }
+                  } catch (e) {
+                    if (context.mounted) {
+                      Navigator.pop(context);
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(
+                          content: Text('Plan oluşturulamadı: $e'),
+                          backgroundColor: Colors.red,
+                        ),
+                      );
+                    }
                   }
                 },
                 icon: const Icon(Icons.all_inclusive),

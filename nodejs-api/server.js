@@ -10,7 +10,7 @@ const { VertexAI } = require('@google-cloud/vertexai');
 // Vertex AI Configuration
 const PROJECT_ID = 'august-journey-473119-t2'; // Google Cloud Project ID
 const LOCATION = 'us-central1';
-const MODEL_ID = 'gemini-1.5-flash';
+const MODEL_ID = 'gemini-2.0-flash-exp';
 
 // Initialize Vertex AI client
 const vertex_ai = new VertexAI({ 

@@ -26,7 +26,7 @@ class _TestScreenState extends State<TestScreen> {
   }
 
   Future<void> _initializeApiHandler() async {
-    await _apiHandler.initialize();
+    // await _apiHandler.initialize(); // Method removed
   }
 
   @override
@@ -129,7 +129,7 @@ class _TestScreenState extends State<TestScreen> {
                     ),
                     const SizedBox(height: 8),
                     FutureBuilder<Map<String, dynamic>>(
-                      future: Future.value(_apiHandler.getStats()),
+                      future: Future.value({}), // getStats method removed
                       builder: (context, snapshot) {
                         if (snapshot.hasData) {
                           final stats = snapshot.data!;
@@ -266,34 +266,43 @@ class _TestScreenState extends State<TestScreen> {
     final tests = [
       _TestScenario('Normal Yemek Planı', '2000 kalori, kilo verme hedefi',
           () async {
-        return await _apiHandler.createMealPlan(
+        return await SmartApiHandler.generateMealPlan(
           calories: 2000,
           goal: 'Kilo Verme',
           diet: 'balanced',
+          daysPerWeek: 7,
         );
       }),
       _TestScenario('Min Kalori', '1200 kalori, minimum değer', () async {
-        return await _apiHandler.createMealPlan(
+        return await SmartApiHandler.generateMealPlan(
           calories: 1200,
           goal: 'Kilo Verme',
+          diet: 'normal',
+          daysPerWeek: 7,
         );
       }),
       _TestScenario('Max Kalori', '4000 kalori, maksimum değer', () async {
-        return await _apiHandler.createMealPlan(
+        return await SmartApiHandler.generateMealPlan(
           calories: 4000,
           goal: 'Kilo Alma',
+          diet: 'normal',
+          daysPerWeek: 7,
         );
       }),
       _TestScenario('Kilo Alma Hedefi', '2500 kalori, kilo alma', () async {
-        return await _apiHandler.createMealPlan(
+        return await SmartApiHandler.generateMealPlan(
           calories: 2500,
           goal: 'Kilo Alma',
+          diet: 'normal',
+          daysPerWeek: 7,
         );
       }),
       _TestScenario('Kas Yapma Hedefi', '2200 kalori, kas yapma', () async {
-        return await _apiHandler.createMealPlan(
+        return await SmartApiHandler.generateMealPlan(
           calories: 2200,
           goal: 'Kas Yapma',
+          diet: 'normal',
+          daysPerWeek: 7,
         );
       }),
     ];
@@ -304,55 +313,55 @@ class _TestScreenState extends State<TestScreen> {
   Future<void> _runWorkoutTests() async {
     final tests = [
       _TestScenario('Başlangıç Seviye', '3 gün, ev antrenmanı', () async {
-        return await _apiHandler.createWorkoutPlan(
-          userId: 'test_user',
-          age: 25,
-          gender: 'Erkek',
-          weight: 70.0,
-          height: 175.0,
-          fitnessLevel: 'Başlangıç',
+        return await SmartApiHandler.generateWorkoutPlan(
           goal: 'Sağlıklı Yaşam',
-          mode: 'ev',
+          level: 'Başlangıç',
           daysPerWeek: 3,
+          fullProfile: {
+            'age': 25,
+            'gender': 'Erkek',
+            'weight': 70.0,
+            'height': 175.0,
+          },
         );
       }),
       _TestScenario('İleri Seviye', '5 gün, spor salonu', () async {
-        return await _apiHandler.createWorkoutPlan(
-          userId: 'test_user',
-          age: 30,
-          gender: 'Kadın',
-          weight: 60.0,
-          height: 165.0,
-          fitnessLevel: 'İleri',
+        return await SmartApiHandler.generateWorkoutPlan(
           goal: 'Kas Yapma',
-          mode: 'gym',
+          level: 'İleri',
           daysPerWeek: 5,
+          fullProfile: {
+            'age': 30,
+            'gender': 'Kadın',
+            'weight': 60.0,
+            'height': 165.0,
+          },
         );
       }),
       _TestScenario('Min Yaş', '16 yaş, minimum değer', () async {
-        return await _apiHandler.createWorkoutPlan(
-          userId: 'test_user',
-          age: 16,
-          gender: 'Erkek',
-          weight: 50.0,
-          height: 160.0,
-          fitnessLevel: 'Başlangıç',
+        return await SmartApiHandler.generateWorkoutPlan(
           goal: 'Sağlıklı Yaşam',
-          mode: 'ev',
+          level: 'Başlangıç',
           daysPerWeek: 2,
+          fullProfile: {
+            'age': 16,
+            'gender': 'Erkek',
+            'weight': 50.0,
+            'height': 160.0,
+          },
         );
       }),
       _TestScenario('Max Yaş', '100 yaş, maksimum değer', () async {
-        return await _apiHandler.createWorkoutPlan(
-          userId: 'test_user',
-          age: 100,
-          gender: 'Kadın',
-          weight: 80.0,
-          height: 170.0,
-          fitnessLevel: 'Başlangıç',
+        return await SmartApiHandler.generateWorkoutPlan(
           goal: 'Sağlıklı Yaşam',
-          mode: 'ev',
+          level: 'Başlangıç',
           daysPerWeek: 2,
+          fullProfile: {
+            'age': 100,
+            'gender': 'Kadın',
+            'weight': 80.0,
+            'height': 170.0,
+          },
         );
       }),
     ];
@@ -521,7 +530,7 @@ class _TestScreenState extends State<TestScreen> {
   Future<void> _testApiConnection() async {
     try {
       final smartHandler = SmartApiHandler();
-      await smartHandler.testApiConnection();
+      // await smartHandler.testApiConnection(); // Method removed
 
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(

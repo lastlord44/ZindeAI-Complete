@@ -326,21 +326,21 @@ class _WorkoutPlanFormScreenState extends State<WorkoutPlanFormScreen> {
 
     try {
       final apiService = context.read<ApiService>();
-      final result = await apiService.createWorkoutPlan(
-        userId: 'user_${DateTime.now().millisecondsSinceEpoch}',
-        age: _age,
-        gender: _gender,
-        weight: _weight.toDouble(),
-        height: _height.toDouble(),
-        fitnessLevel: _fitnessLevel,
-        goal: _goal,
-        mode: _mode,
-        daysPerWeek: _daysPerWeek,
-        preferredSplit: _preferredSplit,
-        equipment: _equipment.isNotEmpty ? [_equipment] : null,
-        injuries: _injuries.isNotEmpty ? [_injuries] : null,
-        timePerSession: _timePerSession,
-      );
+      final result = await apiService.generateWorkoutPlan({
+        'userId': 'user_${DateTime.now().millisecondsSinceEpoch}',
+        'age': _age,
+        'gender': _gender,
+        'weight': _weight.toDouble(),
+        'height': _height.toDouble(),
+        'fitnessLevel': _fitnessLevel,
+        'goal': _goal,
+        'mode': _mode,
+        'daysPerWeek': _daysPerWeek,
+        'preferredSplit': _preferredSplit,
+        'equipment': _equipment.isNotEmpty ? [_equipment] : null,
+        'injuries': _injuries.isNotEmpty ? [_injuries] : null,
+        'timePerSession': _timePerSession,
+      });
 
       // Sonucu göster
       if (mounted) {

@@ -50,23 +50,23 @@ class _WeeklyPlanScreenState extends State<WeeklyPlanScreen>
 
   Future<void> _loadWorkoutPlan(ApiService apiService) async {
     try {
-      final plan = await apiService.createWorkoutPlan(
-        userId: 'user_${DateTime.now().millisecondsSinceEpoch}',
-        age: widget.profile.age,
-        gender: widget.profile.sex,
-        weight: widget.profile.weightKg,
-        height: widget.profile.heightCm.toDouble(),
-        fitnessLevel: _getFitnessLevel(),
-        goal: widget.profile.goal,
-        mode: widget.profile.training.mode,
-        daysPerWeek: widget.profile.training.daysPerWeek,
-        preferredSplit: widget.profile.training.splitPreference == 'AUTO'
+      final plan = await apiService.generateWorkoutPlan({
+        'userId': 'user_${DateTime.now().millisecondsSinceEpoch}',
+        'age': widget.profile.age,
+        'gender': widget.profile.sex,
+        'weight': widget.profile.weightKg,
+        'height': widget.profile.heightCm.toDouble(),
+        'fitnessLevel': _getFitnessLevel(),
+        'goal': widget.profile.goal,
+        'mode': widget.profile.training.mode,
+        'daysPerWeek': widget.profile.training.daysPerWeek,
+        'preferredSplit': widget.profile.training.splitPreference == 'AUTO'
             ? null
             : widget.profile.training.splitPreference.toLowerCase(),
-      );
+      });
 
       setState(() {
-        _workoutPlan = plan;
+        _workoutPlan = plan as WorkoutPlan?;
         _isLoadingWorkout = false;
       });
     } catch (e) {
@@ -85,25 +85,25 @@ class _WeeklyPlanScreenState extends State<WeeklyPlanScreen>
       final targetCalories = _getTargetCalories(tdee);
 
       // API'YE DİREKT 7 GÜNLÜK İSTE
-      final plan = await apiService.createMealPlan(
-        calories: targetCalories,
-        goal: _getMealGoal(),
-        diet: _getDietType(),
-        daysPerWeek: 7, // ZORLA 7
-        preferences: widget.profile.dietFlags.isNotEmpty
+      final plan = await apiService.generateMealPlan({
+        'calories': targetCalories,
+        'goal': _getMealGoal(),
+        'diet': _getDietType(),
+        'daysPerWeek': 7, // ZORLA 7
+        'preferences': widget.profile.dietFlags.isNotEmpty
             ? {for (var flag in widget.profile.dietFlags) flag: true}
             : {},
-      );
+      });
 
       debugPrint('API Response: Plan alındı');
-      
+
       // 7 gün geldiğini kontrol et
-      if (plan.dailyPlan.length < 7) {
-        throw '7 günlük plan gelmedi, gelen gün sayısı: ${plan.dailyPlan.length}';
+      if ((plan as Map<String, dynamic>)['dailyPlan']?.length < 7) {
+        throw '7 günlük plan gelmedi, gelen gün sayısı: ${(plan as Map<String, dynamic>)['dailyPlan']?.length}';
       }
 
       setState(() {
-        _mealPlan = plan; // AI'dan gelen plan
+        _mealPlan = plan as MealPlan?; // AI'dan gelen plan
         _isLoadingMeal = false;
       });
     } catch (e) {
@@ -155,14 +155,18 @@ class _WeeklyPlanScreenState extends State<WeeklyPlanScreen>
   }
 
   int _getTargetCalories(double tdee) {
-    switch (widget.profile.goal) {
-      case 'fat_loss':
-        return (tdee * 0.8).round(); // %20 deficit
-      case 'muscle_gain':
-        return (tdee * 1.1).round(); // %10 surplus
-      default:
-        return tdee.round();
+    final goal = widget.profile.goal;
+    if (goal.contains('fat') ||
+        goal.contains('kilo_ver') ||
+        goal == 'lose_weight') {
+      return (tdee * 0.8).round();
     }
+    if (goal.contains('gain') ||
+        goal.contains('kilo_al') ||
+        goal == 'muscle_gain') {
+      return (tdee * 1.15).round();
+    }
+    return tdee.round();
   }
 
   String _getMealGoal() {
@@ -216,7 +220,8 @@ class _WeeklyPlanScreenState extends State<WeeklyPlanScreen>
                 Navigator.push(
                   context,
                   MaterialPageRoute(
-                    builder: (_) => MealTrackerScreen(mealPlan: _mealPlan!),
+                    builder: (_) => MealTrackerScreen(
+                        mealPlan: _mealPlan! as Map<String, dynamic>),
                   ),
                 );
               },
@@ -816,7 +821,8 @@ class _DailyPlanCard extends StatelessWidget {
                   padding:
                       const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                   decoration: BoxDecoration(
-                    color: Theme.of(context).primaryColor.withValues(alpha: 0.1),
+                    color:
+                        Theme.of(context).primaryColor.withValues(alpha: 0.1),
                     borderRadius: BorderRadius.circular(20),
                   ),
                   child: Text(
@@ -862,8 +868,7 @@ class _MacroItem extends StatelessWidget {
         const SizedBox(height: 2),
         Text(
           label,
-          style: TextStyle(
-              fontSize: 12, color: Colors.grey.shade600),
+          style: TextStyle(fontSize: 12, color: Colors.grey.shade600),
         ),
       ],
     );
