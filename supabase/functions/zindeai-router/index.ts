@@ -2,7 +2,7 @@ import { serve } from "https://deno.land/std@0.177.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
 const GEMINI_API_KEY = Deno.env.get("GEMINI_API_KEY");
-const GOOGLE_AI_API_URL = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${GEMINI_API_KEY}`;
+const GOOGLE_AI_API_URL = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.0-pro-001:generateContent?key=${GEMINI_API_KEY}`;
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -190,12 +190,17 @@ JSON çıktısını oluşturmadan önce, KURAL 1'de belirtilen kalori ve protein
       console.log("📝 AI'dan gelen response uzunluğu:", aiResponseText.length);
       console.log("📝 AI'dan gelen response (ilk 500 karakter):", aiResponseText.substring(0, 500));
 
-      // JSON parse kontrolü
+      // JSON parse kontrolü - Güçlendirilmiş versiyon
       let parsedJsonResponse;
       try {
         console.log("🔍 JSON parse denemesi başlıyor...");
-        const cleanedText = aiResponseText.replace(/```json/g, "").replace(/```/g, "").trim();
-        parsedJsonResponse = JSON.parse(cleanedText);
+        // AI'dan gelen metnin içinde JSON arayan daha güçlü bir yöntem
+        const jsonMatch = aiResponseText.match(/\{[\s\S]*\}/);
+        if (!jsonMatch) {
+            throw new Error("AI response does not contain a valid JSON object.");
+        }
+        const jsonString = jsonMatch[0];
+        parsedJsonResponse = JSON.parse(jsonString);
         console.log("✅ JSON parse başarılı!");
       } catch (parseError) {
         console.error("❌ JSON parse hatası:", parseError.message);
