@@ -1,5 +1,8 @@
-import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
-import { GoogleGenerativeAI } from "https://esm.sh/@google/generative-ai@0.21.0";
+import { serve } from "https://deno.land/std@0.177.0/http/server.ts";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+
+const GEMINI_API_KEY = Deno.env.get("GEMINI_API_KEY");
+const GOOGLE_AI_API_URL = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash-latest:generateContent?key=${GEMINI_API_KEY}`;
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -32,24 +35,9 @@ serve(async (req) => {
     const { requestType, data } = await req.json();
     console.log("Request data:", { requestType, data });
 
-    const apiKey = Deno.env.get("GEMINI_API_KEY");
-    console.log("API Key exists:", !!apiKey);
-
-    if (!apiKey) {
+    if (!GEMINI_API_KEY) {
       throw new Error("GEMINI_API_KEY not found");
     }
-
-     const genAI = new GoogleGenerativeAI(apiKey);
-     const model = genAI.getGenerativeModel({
-       model: "gemini-2.0-flash-exp",
-       generationConfig: {
-         temperature: 0.1, // ÇOK DÜŞÜK = kurallara %100 uyar
-         topP: 0.7,
-         topK: 20,
-         maxOutputTokens: 8192,
-       },
-       systemInstruction: "Sen bir profesyonel diyetisyen ve fitness koçusun. Verilen hedef kalori ve protein değerlerini KESINLIKLE tutturmalısın. Düşük değerler KABUL EDİLMEZ. Yasak besinleri ASLA ÖNERMEYECEKSİN.",
-     });
 
     if (requestType === "plan") {
       // Kullanıcı bilgilerini al
@@ -67,14 +55,8 @@ serve(async (req) => {
         targetCalories: targetCalories,
       });
 
-      // KALORİ KONTROL - Eğer çok düşükse uyar!
-      if (targetCalories < 1500) {
-        console.warn("⚠️ UYARI: Kalori çok düşük!", targetCalories);
-      }
-
       // Protein hesapla (KILO BAZLI - Bilimsel Standart: 1.8-2.2g/kg)
       let proteinMultiplier = 1.8; // varsayılan
-      let minProteinPerMeal = 25;
 
       if (
         userGoal.includes("muscle") || userGoal.includes("gain") ||
@@ -82,31 +64,28 @@ serve(async (req) => {
       ) {
         // Kas kazanma/Kilo alma: 2.0-2.2g protein/kg
         proteinMultiplier = 2.2;
-        minProteinPerMeal = 30;
       } else if (
         userGoal.includes("fat") || userGoal.includes("loss") ||
         userGoal.includes("verme")
       ) {
         // Kilo verme: 1.8-2.0g protein/kg (kas koruma için)
         proteinMultiplier = 2.0;
-        minProteinPerMeal = 25;
       }
 
-      const minDailyProtein = Math.round(userWeight * proteinMultiplier);
-      const maxDailyProtein = Math.round(userWeight * 2.2); // Maksimum 2.2g/kg
+      const proteinGoal = Math.round(userWeight * proteinMultiplier);
 
       console.log("🎯 Hedefler:", {
         calories: targetCalories,
-        protein: `${minDailyProtein}-${maxDailyProtein}g`,
+        protein: proteinGoal,
       });
 
-       // PROMPT - Profesyonel Diyetisyen - Beslenme Planı
-       const prompt = `
+      // PROMPT - Profesyonel Diyetisyen - Beslenme Planı
+      const prompt = `
 # GÖREV TANIMI
 Sen, Türkiye'nin en iyi diyetisyenlerinden ve spor koçlarından oluşan bir ekibin beynisin. Adın ZindeAI. Görevin, SANA SUNULAN KULLANICI BİLGİLERİNE VE KURALLARA %100 SADIK KALARAK, JSON formatında bir beslenme veya antrenman planı oluşturmaktır. YARATICILIK KULLANMA. SADECE KURALLARI UYGULA.
 
 # KURAL 1: MATEMATİKSEL ZORUNLULUK (EN ÖNEMLİ KURAL)
-BU BİR TAVSİYE DEĞİL, MATEMATİKSEL BİR EMİRDİR. OLUŞTURULACAK BESLENME PLANININ TOPLAM KALORİSİ, KULLANICININ HEDEFİ OLAN \`${targetCalories} kcal\` DEĞERİNE EŞİT OLMALIDIR. MAKSİMUM SAPMA PAYI SADECE +/- 50 KCAL'DİR. AYNI ŞEKİLDE, TOPLAM PROTEİN MİKTARI, HEDEF OLAN \`${minDailyProtein}g\` DEĞERİNE EŞİT OLMALIDIR. MAKSİMUM SAPMA PAYI SADECE +/- 5 GRAMDIR. BU KURALA UYMAYAN BİR PLAN KESİNLİKLE KABUL EDİLEMEZ VE OLUŞTURULMAMALIDIR.
+BU BİR TAVSİYE DEĞİL, MATEMATİKSEL BİR EMİRDİR. OLUŞTURULACAK BESLENME PLANININ TOPLAM KALORİSİ, KULLANICININ HEDEFİ OLAN \`${targetCalories} kcal\` DEĞERİNE EŞİT OLMALIDIR. MAKSİMUM SAPMA PAYI SADECE +/- 50 KCAL'DİR. AYNI ŞEKİLDE, TOPLAM PROTEİN MİKTARI, HEDEF OLAN \`${proteinGoal} g\` DEĞERİNE EŞİT OLMALIDIR. MAKSİMUM SAPMA PAYI SADECE +/- 5 GRAMDIR. BU KURALA UYMAYAN BİR PLAN KESİNLİKLE KABUL EDİLEMEZ VE OLUŞTURULMAMALIDIR.
 
 # KURAL 2: YASAKLI GIDALAR LİSTESİ (DOKUNULMAZ LİSTE)
 AŞAĞIDAKİ LİSTEDE YER ALAN HİÇBİR GIDA, MALZEME VEYA TARİF, PLANIN HİÇBİR YERİNDE KESİNLİKLE KULLANILAMAZ:
@@ -125,17 +104,19 @@ AŞAĞIDAKİ LİSTEDE YER ALAN HİÇBİR GIDA, MALZEME VEYA TARİF, PLANIN HİÇ
 - Tarifler net olmalı: gramaj, pişirme yöntemi (haşlama, fırın, ızgara) ve tahmini süre belirtilmelidir.
 - Sütlaç gibi şekerli ve besin değeri düşük tatlılar önerilmemelidir.
 
-# KULLANICI BİLGİLERİ
+# KULLANICI BİLGİLERİ (TAM VE EKSİKSİZ HALİ)
 - Yaş: ${data.age || 'Belirtilmemiş'}
 - Boy: ${data.height_cm || 'Belirtilmemiş'} cm
 - Kilo: ${userWeight} kg
 - Cinsiyet: ${data.sex || 'Belirtilmemiş'}
+- Aktivite Seviyesi: ${data.activity_level || 'Belirtilmemiş'}
 - Fitness Seviyesi: ${data.activity_level || 'Belirtilmemiş'}
 - Ana Hedef: ${userGoal}
 - Haftalık Antrenman Sıklığı: ${data.daysOfWeek || 7} gün
 - Beslenme Tercihi: ${data.diet || 'balanced'}
-- Günlük Kalori Hedefi: ${targetCalories} kcal (ZORUNLU!)
-- Günlük Protein Hedefi: ${minDailyProtein}g (ZORUNLU!)
+- Beslenme Kısıtlamaları: ${data.diet || 'balanced'}
+- Alerjiler: Yok
+- Kas Kütlesi Kazanımı İsteği: ${userGoal.includes('kazanma') || userGoal.includes('muscle') ? 'Evet' : 'Hayır'}
 
 # ÇIKTI FORMATI (ZORUNLU)
 Çıktı, sadece ve sadece aşağıda belirtilen yapıya sahip, yorum satırı içermeyen, geçerli bir JSON objesi olmalıdır. Başka hiçbir metin, açıklama veya selamlama ekleme.
@@ -145,7 +126,7 @@ AŞAĞIDAKİ LİSTEDE YER ALAN HİÇBİR GIDA, MALZEME VEYA TARİF, PLANIN HİÇ
   "planTitle": "Kişiselleştirilmiş Beslenme Planı",
   "totalDays": 7,
   "dailyCalorieGoal": ${targetCalories},
-  "dailyProteinGoal": ${minDailyProtein},
+  "dailyProteinGoal": ${proteinGoal},
   "days": [
     {
       "day": 1,
@@ -157,12 +138,7 @@ AŞAĞIDAKİ LİSTEDE YER ALAN HİÇBİR GIDA, MALZEME VEYA TARİF, PLANIN HİÇ
           "totalCalories": "INTEGER_VALUE",
           "totalProtein": "INTEGER_VALUE",
           "recipeName": "Yulaf Lapası",
-          "ingredients": [
-            "50g yulaf ezmesi",
-            "200ml süt",
-            "1 adet muz",
-            "10 adet badem"
-          ],
+          "ingredients": [ "50g yulaf ezmesi", "200ml süt" ],
           "instructions": "Tüm malzemeleri karıştırıp pişirin.",
           "isConsumed": false
         }
@@ -183,111 +159,64 @@ JSON çıktısını oluşturmadan önce, KURAL 1'de belirtilen kalori ve protein
 `;
 
       console.log("🤖 AI'ya gönderilen prompt uzunluğu:", prompt.length);
-      
-      const result = await model.generateContent(prompt);
 
-      const response = await result.response;
-      const text = response.text();
+      const requestBody = {
+        contents: [{ parts: [{ text: prompt }] }],
+        generationConfig: {
+          temperature: 0.2,
+          maxOutputTokens: 8192,
+        },
+        systemInstruction: {
+          parts: [{
+            text: "Sen ZindeAI adında, sadece JSON formatında bilimsel ve sağlıklı spor ve beslenme planları üreten bir yapay zekasın. Çıktıların her zaman RFC 8259 JSON standardına uygun olmalıdır."
+          }]
+        }
+      };
+
+      const geminiResponse = await fetch(GOOGLE_AI_API_URL, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(requestBody),
+      });
+
+      if (!geminiResponse.ok) {
+        const errorBody = await geminiResponse.text();
+        throw new Error(`Gemini API Error: ${geminiResponse.status} ${errorBody}`);
+      }
+
+      const responseData = await geminiResponse.json();
+      const aiResponseText = responseData.candidates[0].content.parts[0].text;
       
-      console.log("📝 AI'dan gelen response uzunluğu:", text.length);
-      console.log("📝 AI'dan gelen response (ilk 500 karakter):", text.substring(0, 500));
+      console.log("📝 AI'dan gelen response uzunluğu:", aiResponseText.length);
+      console.log("📝 AI'dan gelen response (ilk 500 karakter):", aiResponseText.substring(0, 500));
 
       // JSON parse kontrolü
-      let plan;
+      let parsedJsonResponse;
       try {
         console.log("🔍 JSON parse denemesi başlıyor...");
-        plan = JSON.parse(text);
+        const cleanedText = aiResponseText.replace(/```json/g, "").replace(/```/g, "").trim();
+        parsedJsonResponse = JSON.parse(cleanedText);
         console.log("✅ JSON parse başarılı!");
       } catch (parseError) {
         console.error("❌ JSON parse hatası:", parseError.message);
-        console.log("🔍 Text içinden JSON çıkarmayı deniyorum...");
+        console.log("🔍 AI'dan gelen tam response:", aiResponseText);
         
-        // Text içinden JSON'u çıkarmayı dene
-        const jsonMatch = text.match(/\{[\s\S]*\}/);
-        if (jsonMatch) {
-          console.log("✅ JSON pattern bulundu, parse ediyorum...");
-          plan = JSON.parse(jsonMatch[0]);
-          console.log("✅ JSON parse başarılı!");
-        } else {
-          console.error("❌ JSON pattern bulunamadı!");
-          throw new Error(`JSON parse hatası: ${parseError.message}`);
-        }
-      }
-
-      // 🔥 VALİDASYON: Kalori ve protein kontrolü
-      console.log("🔍 Validation başlıyor...");
-      console.log("📊 Plan yapısı:", {
-        planExists: !!plan,
-        hasDays: !!(plan && plan.days),
-        daysLength: plan?.days?.length || 0
-      });
-      
-      if (plan && plan.days && plan.days.length > 0) {
-        const firstDay = plan.days[0];
-        const dayCalories = firstDay.totalCalories || firstDay.dailyTotals?.calories || 0;
-        const dayProtein = firstDay.totalProtein || firstDay.dailyTotals?.protein || 0;
-        
-        console.log("📊 İlk gün verileri:", {
-          dayCalories,
-          dayProtein,
-          firstDayKeys: Object.keys(firstDay)
-        });
-
-        console.log("🔍 VALİDASYON:", {
-          hedefKalori: targetCalories,
-          gelenKalori: dayCalories,
-          hedefProtein: `${minDailyProtein}-${maxDailyProtein}g`,
-          gelenProtein: `${dayProtein}g`,
-        });
-
-        // Kalori kontrolü
-        if (dayCalories < targetCalories - 200) {
-          console.error("❌ KALORİ ÇOK DÜŞÜK!", {
-            hedef: targetCalories,
-            gelen: dayCalories,
-          });
-          throw new Error(
-            `Kalori çok düşük: ${dayCalories} kcal (hedef: ${targetCalories} kcal)`,
-          );
-        }
-
-        // Protein kontrolü
-        if (dayProtein < minDailyProtein - 20) {
-          console.error("❌ PROTEİN ÇOK DÜŞÜK!", {
-            hedef: minDailyProtein,
-            gelen: dayProtein,
-          });
-          throw new Error(
-            `Protein çok düşük: ${dayProtein}g (hedef: ${minDailyProtein}g)`,
-          );
-        }
-
-        // Yasak besin kontrolü
-        const dayMeals = JSON.stringify(firstDay.meals || []).toLowerCase();
-        const bannedFoods = [
-          "simit",
-          "gözleme",
-          "börek",
-          "pide",
-          "lahmacun",
-          "pizza",
-          "mantı",
-          "poğaça",
-        ];
-        for (const banned of bannedFoods) {
-          if (dayMeals.includes(banned)) {
-            console.error(`❌ YASAK BESİN BULUNDU: ${banned}`);
-            throw new Error(`Yasak besin önerildi: ${banned}`);
+        return new Response(
+          JSON.stringify({ 
+            error: "Yapay zeka bu kriterlere uygun bir plan oluşturamadı. Lütfen hedeflerinizi biraz daha esnetip tekrar deneyin.",
+            details: aiResponseText
+          }),
+          {
+            headers: { ...corsHeaders, "Content-Type": "application/json" },
+            status: 400,
           }
-        }
-
-        console.log("✅ VALİDASYON BAŞARILI!");
+        );
       }
 
-      return new Response(
-        JSON.stringify({ success: true, plan }),
-        { headers: { ...corsHeaders, "Content-Type": "application/json" } },
-      );
+      return new Response(JSON.stringify(parsedJsonResponse), {
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+        status: 200,
+      });
     } else if (requestType === "antrenman") {
       // Kullanıcı bilgilerini al
       const userWeight = data.weight || 70;
