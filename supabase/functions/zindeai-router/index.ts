@@ -2,9 +2,9 @@ import { serve } from "https://deno.land/std@0.177.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
 const GEMINI_API_KEY = Deno.env.get("GEMINI_API_KEY");
-const GOOGLE_AI_API_URL = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.0-pro-001:generateContent?key=${GEMINI_API_KEY}`;
-
-const corsHeaders = {
+const GOOGLE_AI_API_URL = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${GEMINI_API_KEY}`;
+  
+  const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers":
     "authorization, x-client-info, apikey, content-type",
@@ -17,12 +17,12 @@ serve(async (req) => {
 
   try {
     console.log("Request received:", req.method, req.url);
-
+    
     // Test endpoint
     if (req.url.includes("test")) {
       return new Response(
-        JSON.stringify({
-          success: true,
+        JSON.stringify({ 
+          success: true, 
           message: "Edge Function çalışıyor!",
           timestamp: new Date().toISOString(),
         }),
@@ -327,7 +327,7 @@ JSON Şeması:
 
       const response = await result.response;
       const text = response.text();
-
+      
       // JSON parse kontrolü
       let antrenman;
       try {
@@ -387,8 +387,8 @@ JSON Şeması:
     console.error("Hata:", error);
     console.error("Error stack:", error.stack);
     return new Response(
-      JSON.stringify({
-        success: false,
+      JSON.stringify({ 
+        success: false, 
         error: error.message,
         stack: error.stack,
       }),
