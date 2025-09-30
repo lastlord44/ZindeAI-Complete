@@ -182,30 +182,56 @@ AŞAĞIDAKİ LİSTEDE YER ALAN HİÇBİR GIDA, MALZEME VEYA TARİF, PLANIN HİÇ
 JSON çıktısını oluşturmadan önce, KURAL 1'de belirtilen kalori ve protein hedeflerini tutturup tutturmadığını bir kez daha kontrol et. Eğer tutmuyorsa, planı revize et ve hedeflere uygun hale getir. SADECE hedeflere uygun planı JSON olarak döndür.
 `;
 
+      console.log("🤖 AI'ya gönderilen prompt uzunluğu:", prompt.length);
+      
       const result = await model.generateContent(prompt);
 
       const response = await result.response;
       const text = response.text();
+      
+      console.log("📝 AI'dan gelen response uzunluğu:", text.length);
+      console.log("📝 AI'dan gelen response (ilk 500 karakter):", text.substring(0, 500));
 
       // JSON parse kontrolü
       let plan;
       try {
+        console.log("🔍 JSON parse denemesi başlıyor...");
         plan = JSON.parse(text);
+        console.log("✅ JSON parse başarılı!");
       } catch (parseError) {
+        console.error("❌ JSON parse hatası:", parseError.message);
+        console.log("🔍 Text içinden JSON çıkarmayı deniyorum...");
+        
         // Text içinden JSON'u çıkarmayı dene
         const jsonMatch = text.match(/\{[\s\S]*\}/);
         if (jsonMatch) {
+          console.log("✅ JSON pattern bulundu, parse ediyorum...");
           plan = JSON.parse(jsonMatch[0]);
+          console.log("✅ JSON parse başarılı!");
         } else {
-          throw new Error("JSON parse hatası");
+          console.error("❌ JSON pattern bulunamadı!");
+          throw new Error(`JSON parse hatası: ${parseError.message}`);
         }
       }
 
       // 🔥 VALİDASYON: Kalori ve protein kontrolü
+      console.log("🔍 Validation başlıyor...");
+      console.log("📊 Plan yapısı:", {
+        planExists: !!plan,
+        hasDays: !!(plan && plan.days),
+        daysLength: plan?.days?.length || 0
+      });
+      
       if (plan && plan.days && plan.days.length > 0) {
         const firstDay = plan.days[0];
-        const dayCalories = firstDay.totalCalories || 0;
-        const dayProtein = firstDay.totalProtein || 0;
+        const dayCalories = firstDay.totalCalories || firstDay.dailyTotals?.calories || 0;
+        const dayProtein = firstDay.totalProtein || firstDay.dailyTotals?.protein || 0;
+        
+        console.log("📊 İlk gün verileri:", {
+          dayCalories,
+          dayProtein,
+          firstDayKeys: Object.keys(firstDay)
+        });
 
         console.log("🔍 VALİDASYON:", {
           hedefKalori: targetCalories,
