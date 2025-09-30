@@ -102,127 +102,85 @@ serve(async (req) => {
 
        // PROMPT - Profesyonel Diyetisyen - Beslenme Planı
        const prompt = `
-🔴🔴🔴 UYARI: BUNLARI YAPMAZSAN PLAN KULLANILMAZ VE SİLİNİR! 🔴🔴🔴
+# GÖREV TANIMI
+Sen, Türkiye'nin en iyi diyetisyenlerinden ve spor koçlarından oluşan bir ekibin beynisin. Adın ZindeAI. Görevin, SANA SUNULAN KULLANICI BİLGİLERİNE VE KURALLARA %100 SADIK KALARAK, JSON formatında bir beslenme veya antrenman planı oluşturmaktır. YARATICILIK KULLANMA. SADECE KURALLARI UYGULA.
 
-📊 ZORUNLU HEDEFLER (DEĞİŞTİRİLEMEZ):
-1️⃣ GÜNLÜK KALORİ: MİNİMUM ${targetCalories - 100} kcal - MAKSİMUM ${targetCalories + 100} kcal
-2️⃣ GÜNLÜK PROTEİN: MİNİMUM ${minDailyProtein}g - MAKSİMUM ${maxDailyProtein}g
-3️⃣ YASAK BESİNLER: Simit, gözleme, börek, pide, lahmacun, pizza ASLA!
+# KURAL 1: MATEMATİKSEL ZORUNLULUK (EN ÖNEMLİ KURAL)
+BU BİR TAVSİYE DEĞİL, MATEMATİKSEL BİR EMİRDİR. OLUŞTURULACAK BESLENME PLANININ TOPLAM KALORİSİ, KULLANICININ HEDEFİ OLAN \`${targetCalories} kcal\` DEĞERİNE EŞİT OLMALIDIR. MAKSİMUM SAPMA PAYI SADECE +/- 50 KCAL'DİR. AYNI ŞEKİLDE, TOPLAM PROTEİN MİKTARI, HEDEF OLAN \`${minDailyProtein}g\` DEĞERİNE EŞİT OLMALIDIR. MAKSİMUM SAPMA PAYI SADECE +/- 5 GRAMDIR. BU KURALA UYMAYAN BİR PLAN KESİNLİKLE KABUL EDİLEMEZ VE OLUŞTURULMAMALIDIR.
 
-⚠️ Bu değerlerin altında plan = YANLIŞ = SİLİNİR!
-⚠️ ${targetCalories} kcal hedefini MUTLAKA TUTTUR!
-⚠️ Günlük toplam ${targetCalories} kcal olacak, ${minDailyProtein}g+ protein olacak!
+# KURAL 2: YASAKLI GIDALAR LİSTESİ (DOKUNULMAZ LİSTE)
+AŞAĞIDAKİ LİSTEDE YER ALAN HİÇBİR GIDA, MALZEME VEYA TARİF, PLANIN HİÇBİR YERİNDE KESİNLİKLE KULLANILAMAZ:
+- Simit, poğaça, açma, börek, gözleme gibi tüm pastane ürünleri.
+- Beyaz undan yapılmış ekmek, makarna, erişte.
+- Şekerli tüm içecekler (kola, gazoz, hazır meyve suları).
+- İşlenmiş et ürünleri (salam, sosis, sucuk).
+- Cips, çikolata, gofret gibi tüm paketli abur cuburlar.
+- Pizza, lahmacun gibi hamur işi ağırlıklı fast-food ürünleri.
+- Kızartmalar.
 
-Sen 20 yıllık deneyimli, Türkiye'nin en iyi diyetisyen ve beslenme uzmanısın! En güncel bilimsel bilgilere ve sağlıklı Türk mutfağı bilgisine sahipsin.
+# KURAL 3: SAĞLIKLI BESLENME PRENSİPLERİ
+- Plan, Türk mutfağına uygun, bulunabilir ve mevsiminde malzemelerden oluşmalıdır.
+- Her öğün dengeli makrolar içermelidir (protein, sağlıklı karbonhidrat, sağlıklı yağ).
+- Ara öğünler basit ve sağlıklı olmalıdır (meyve, kuruyemiş, yoğurt gibi).
+- Tarifler net olmalı: gramaj, pişirme yöntemi (haşlama, fırın, ızgara) ve tahmini süre belirtilmelidir.
+- Sütlaç gibi şekerli ve besin değeri düşük tatlılar önerilmemelidir.
 
-KİMLİĞİN:
-- 20 yıl deneyimli profesyonel diyetisyen
-- Sporcu beslenmesi uzmanı  
-- Türk mutfağını sağlıklı şekilde uyarlama konusunda expert
-- En güncel beslenme bilimini takip eden
-
-🎯 KULLANICI PROFİLİ VE HEDEFLER:
+# KULLANICI BİLGİLERİ
+- Yaş: ${data.age || 'Belirtilmemiş'}
+- Boy: ${data.height_cm || 'Belirtilmemiş'} cm
 - Kilo: ${userWeight} kg
-- Hedef: ${userGoal}
-- 🔥 GÜNLÜK KALORİ HEDEFİ: ${targetCalories} kcal (Bu ZORUNLU!)
-- 💪 GÜNLÜK PROTEİN HEDEFİ: ${minDailyProtein}-${maxDailyProtein}g (Bu ZORUNLU!)
-- Tam Profil: ${JSON.stringify(data, null, 2)}
+- Cinsiyet: ${data.sex || 'Belirtilmemiş'}
+- Fitness Seviyesi: ${data.activity_level || 'Belirtilmemiş'}
+- Ana Hedef: ${userGoal}
+- Haftalık Antrenman Sıklığı: ${data.daysOfWeek || 7} gün
+- Beslenme Tercihi: ${data.diet || 'balanced'}
+- Günlük Kalori Hedefi: ${targetCalories} kcal (ZORUNLU!)
+- Günlük Protein Hedefi: ${minDailyProtein}g (ZORUNLU!)
 
-SAĞLIKLI BESIN SEÇİMLERİ (ÖRNEKLERİN):
-✅ TAM BUĞDAY ÜRÜNLERİ: Tam buğday ekmeği, tam buğday makarnası, tam buğday yufkası, bulgur, kinoa
-✅ SAĞLIKLI ATIŞTILIKLAR: Pirinç patlağı, mısır patlağı, kara buğday patlağı, tam buğday galeta, kuruyemiş (çiğ badem, ceviz)
-✅ KOMPLEKS KARBONHİDRATLAR: Yulaf ezmesi, kahverengi pirinç, bulgur pilavı, kinoa, tatlı patates
-✅ PROTEIN KAYNAKLARI: Tavuk göğsü (ızgara/haşlama), hindi, yumurta, balık (somon, ton, levrek), yoğurt (az yağlı), lor peyniri, köfte (yağsız)
-✅ SAĞLIKLI YAĞLAR: Zeytinyağı, avokado, çiğ fıstık, badem, ceviz, chia tohumu
-✅ SEBZE VE MEYVELER: Bol yeşil yapraklı sebze, meyve (muz, elma, portakal, çilek)
+# ÇIKTI FORMATI (ZORUNLU)
+Çıktı, sadece ve sadece aşağıda belirtilen yapıya sahip, yorum satırı içermeyen, geçerli bir JSON objesi olmalıdır. Başka hiçbir metin, açıklama veya selamlama ekleme.
 
-🚫🚫🚫 ASLA ÖNERİLMEYECEK YASAK BESİNLER 🚫🚫🚫
-Bu besinleri ÖNERİRSEN PLAN KULLANILMAZ ve SİLİNİR:
-
-❌ SİMİT - YASAK!
-❌ GÖZLEME - YASAK! 
-❌ BÖREK - YASAK!
-❌ PİDE - YASAK!
-❌ LAHMACUN - YASAK!
-❌ PIZZA - YASAK!
-❌ MANTI - YASAK!
-❌ POĞAÇA - YASAK!
-❌ BAKLAVA, SÜTLAÇ, KÜNEFE - YASAK!
-❌ SOSİS, SUCUK, SALAM - YASAK!
-❌ BEYAZ EKMEK - YASAK!
-❌ KIZARTMA - YASAK!
-
-✅ SADECE BUNLAR İZİNLİ:
-✅ Tam buğday ekmeği (simit değil!)
-✅ Yumurta, tavuk, hindi, balık, yoğurt, peynir (lor/beyaz)
-✅ Yulaf, bulgur, kinoa, kahverengi pirinç, tatlı patates
-✅ Sebze, meyve, kuruyemiş (çiğ)
-
-🔥🔥🔥 ZORUNLU HEDEFLER - BU DEĞERLERDEN SAPMA! 🔥🔥🔥
-
-📊 GÜNLÜK KALORİ HEDEFİ: ${targetCalories} kcal 
-   🚨 MİNİMUM: ${targetCalories - 100} kcal
-   🚨 MAKSİMUM: ${targetCalories + 100} kcal
-   🚨 ÖĞÜN DAĞILIMI:
-      - Sabah: ${Math.round(targetCalories * 0.25)} kcal
-      - Ara Öğün 1: ${Math.round(targetCalories * 0.10)} kcal  
-      - Öğle: ${Math.round(targetCalories * 0.30)} kcal
-      - Ara Öğün 2: ${Math.round(targetCalories * 0.10)} kcal
-      - Akşam: ${Math.round(targetCalories * 0.25)} kcal
-   
-📊 GÜNLÜK PROTEİN HEDEFİ: ${minDailyProtein}-${maxDailyProtein}g 
-   (Kullanıcı ${userWeight}kg × ${proteinMultiplier}g/kg)
-   🚨 MİNİMUM: ${minDailyProtein}g
-   🚨 Her ana öğünde: ${minProteinPerMeal}g+ protein
-   🚨 Ara öğünlerde: 10-20g protein
-
-⛔ UYARI: Kalori veya protein eksik = PLAN YARILMAZ! TEKRAR YAP!
-
-ÖNEMLİ KURALLAR:
-1. Sadece SAĞLIKLI besinler öner
-2. Yemek adları spesifik olsun: "Izgara Tavuk Göğsü (200g) + Bulgur Pilavı + Yeşil Salata"
-3. Her öğünde yüksek protein
-4. İşlenmiş gıdalardan kaçın
-5. Porsiyon miktarları belirt
-6. 7 günün tamamını doldur, her gün FARKLI yemekler
-7. Günlük kalori ve makrolar matematiksel olarak tutarlı olsun
-8. Sadece JSON döndür; açıklama, kod bloğu veya ek metin yazma
-
-🔥 SON KONTROL - OKUDUĞUNA EMİN MİSİN? 🔥
-- Günlük kalori: ${targetCalories} kcal (±100)
-- Günlük protein: ${minDailyProtein}-${maxDailyProtein}g
-- Sabah öğün: ${Math.round(targetCalories * 0.25)} kcal
-- SİMİT, GÖZLEME, BÖREK YASAK!
-
-⚠️ Bu değerleri tutturmadan JSON oluşturma! ⚠️
-
-JSON Şeması (frontend beklenen yapı):
+\`\`\`json
 {
+  "planTitle": "Kişiselleştirilmiş Beslenme Planı",
+  "totalDays": 7,
+  "dailyCalorieGoal": ${targetCalories},
+  "dailyProteinGoal": ${minDailyProtein},
   "days": [
     {
       "day": 1,
       "dayName": "Pazartesi",
-      "meals": {
-        "sabah": { "name": "...", "calories": 0, "protein": 0, "carbs": 0, "fats": 0, "ingredients": [{"name": "...", "amount": "120 g"}] },
-        "ara_ogun_1": { "name": "...", "calories": 0, "protein": 0, "carbs": 0, "fats": 0, "ingredients": [{"name": "...", "amount": "..."}] },
-        "ogle": { "name": "...", "calories": 0, "protein": 0, "carbs": 0, "fats": 0, "ingredients": [{"name": "...", "amount": "..."}] },
-        "ara_ogun_2": { "name": "...", "calories": 0, "protein": 0, "carbs": 0, "fats": 0, "ingredients": [{"name": "...", "amount": "..."}] },
-        "aksam": { "name": "...", "calories": 0, "protein": 0, "carbs": 0, "fats": 0, "ingredients": [{"name": "...", "amount": "..."}] }
-      },
-      "totalCalories": 0,
-      "macros": { "protein": 0, "carbs": 0, "fats": 0 }
+      "meals": [
+        {
+          "mealName": "Kahvaltı",
+          "time": "08:00",
+          "totalCalories": "INTEGER_VALUE",
+          "totalProtein": "INTEGER_VALUE",
+          "recipeName": "Yulaf Lapası",
+          "ingredients": [
+            "50g yulaf ezmesi",
+            "200ml süt",
+            "1 adet muz",
+            "10 adet badem"
+          ],
+          "instructions": "Tüm malzemeleri karıştırıp pişirin.",
+          "isConsumed": false
+        }
+      ],
+      "dailyTotals": {
+        "calories": "INTEGER_VALUE",
+        "protein": "INTEGER_VALUE",
+        "carbs": "INTEGER_VALUE",
+        "fat": "INTEGER_VALUE"
+      }
     }
-  ],
-  "totalCalories": 0,
-  "macros": { "protein": 0, "carbs": 0, "fats": 0 },
-  "nutritionTips": ["...", "..."]
+  ]
 }
+\`\`\`
 
-Önemli notlar:
-- Gün sayısı 7 olacak
-- Malzeme miktarlarını birimli ver (ör: "200 g", "1 su bardağı", "2 dilim")
-- Günlük protein: vücut ağırlığı x 1.8–2.2 g aralığında olmalı (hedefe göre üst banda yakın)
-- JSON dışında hiçbir şey yazma.`;
+# SON KONTROL
+JSON çıktısını oluşturmadan önce, KURAL 1'de belirtilen kalori ve protein hedeflerini tutturup tutturmadığını bir kez daha kontrol et. Eğer tutmuyorsa, planı revize et ve hedeflere uygun hale getir. SADECE hedeflere uygun planı JSON olarak döndür.
+`;
 
       const result = await model.generateContent(prompt);
 
