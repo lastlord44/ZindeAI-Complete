@@ -1,8 +1,10 @@
 import { serve } from "https://deno.land/std@0.177.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
-const GEMINI_API_KEY = Deno.env.get("GEMINI_API_KEY");
-const GOOGLE_AI_API_URL = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${GEMINI_API_KEY}`;
+const VERTEX_AI_PROJECT_ID = Deno.env.get("VERTEX_AI_PROJECT_ID");
+const VERTEX_AI_LOCATION = Deno.env.get("VERTEX_AI_LOCATION") || "us-central1";
+const VERTEX_AI_ACCESS_TOKEN = Deno.env.get("VERTEX_AI_ACCESS_TOKEN");
+const VERTEX_AI_URL = `https://${VERTEX_AI_LOCATION}-aiplatform.googleapis.com/v1/projects/${VERTEX_AI_PROJECT_ID}/locations/${VERTEX_AI_LOCATION}/publishers/google/models/gemini-1.5-flash:generateContent`;
   
   const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -35,8 +37,8 @@ serve(async (req) => {
     const { requestType, data } = await req.json();
     console.log("Request data:", { requestType, data });
 
-    if (!GEMINI_API_KEY) {
-      throw new Error("GEMINI_API_KEY not found");
+    if (!VERTEX_AI_PROJECT_ID || !VERTEX_AI_ACCESS_TOKEN) {
+      throw new Error("VERTEX_AI_PROJECT_ID or VERTEX_AI_ACCESS_TOKEN not found");
     }
 
     if (requestType === "plan") {
@@ -173,18 +175,21 @@ JSON çıktısını oluşturmadan önce, KURAL 1'de belirtilen kalori ve protein
         }
       };
 
-      const geminiResponse = await fetch(GOOGLE_AI_API_URL, {
+      const vertexResponse = await fetch(VERTEX_AI_URL, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: { 
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${VERTEX_AI_ACCESS_TOKEN}`
+        },
         body: JSON.stringify(requestBody),
       });
 
-      if (!geminiResponse.ok) {
-        const errorBody = await geminiResponse.text();
-        throw new Error(`Gemini API Error: ${geminiResponse.status} ${errorBody}`);
+      if (!vertexResponse.ok) {
+        const errorBody = await vertexResponse.text();
+        throw new Error(`Vertex AI Error: ${vertexResponse.status} ${errorBody}`);
       }
 
-      const responseData = await geminiResponse.json();
+      const responseData = await vertexResponse.json();
       const aiResponseText = responseData.candidates[0].content.parts[0].text;
       
       console.log("📝 AI'dan gelen response uzunluğu:", aiResponseText.length);
