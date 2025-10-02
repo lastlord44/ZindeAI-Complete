@@ -349,8 +349,8 @@ class PlanSelectionScreen extends StatelessWidget {
                     print(
                         '🎯 KULLANICI BİLGİLERİ: ${profile.weightKg}kg, ${profile.goal}');
 
-                    // Beslenme planı oluştur - API'nin beklediği formatta
-                    final mealPlan = await apiService.generateMealPlan({
+                    // Beslenme planı oluştur - HİBRİT SİSTEM İLE
+                    final mealPlanResult = await apiService.generateMealPlan({
                       'goal': profile.goal, // muscle_gain, fat_loss, etc.
                       'age': profile.age,
                       'sex': profile.sex, // male/female
@@ -381,12 +381,22 @@ class PlanSelectionScreen extends StatelessWidget {
                       }
                     }
 
+                    // Hibrit bilgilerini al
+                    final bool isFallback =
+                        mealPlanResult['isFallback'] ?? false;
+                    final String? fallbackMessage =
+                        mealPlanResult['fallbackMessage'];
+                    final Map<String, dynamic> mealPlan =
+                        mealPlanResult['plan'];
+
                     await Navigator.push(
                       context,
                       MaterialPageRoute(
                         builder: (_) => MealPlanDisplayScreen(
                           mealPlan: mealPlan,
                           userProfile: userProfile,
+                          isFallback: isFallback, // YENİ
+                          fallbackMessage: fallbackMessage, // YENİ
                         ),
                       ),
                     );

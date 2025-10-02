@@ -1,15 +1,17 @@
 import 'package:dio/dio.dart';
+import 'hybrid_meal_ai.dart';
 
 class ApiService {
   static const String supabaseUrl = 'https://uhibpbwgvnvasxlvcohr.supabase.co';
   static const String supabaseKey =
       'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InVoaWJwYndndm52YXN4bHZjb2hyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3MzU0MDQ4NzIsImV4cCI6MjA1MDk4MDg3Mn0.8Q7Q7Q7Q7Q7Q7Q7Q7Q7Q7Q7Q7Q7Q7Q7Q7Q7Q7Q7Q';
 
-  final Dio _dio;
+  final Dio theDio;
+  late final HybridMealAI _hybridMealAI;
 
-  ApiService() : _dio = Dio() {
-    _dio.options = BaseOptions(
-      baseUrl: '$supabaseUrl/functions/v1',
+  ApiService() : theDio = Dio() {
+    theDio.options = BaseOptions(
+      baseUrl: supabaseUrl,
       headers: {
         'Authorization': 'Bearer $supabaseKey',
         'Content-Type': 'application/json',
@@ -17,33 +19,39 @@ class ApiService {
       connectTimeout: Duration(seconds: 60),
       receiveTimeout: Duration(seconds: 60),
     );
+
+    // Hibrit AI'yi başlat
+    _hybridMealAI = HybridMealAI(
+      dio: theDio,
+      supabaseUrl: supabaseUrl,
+    );
   }
 
-  // BESLENME PLANI İÇİN
+  // BESLENME PLANI İÇİN - HİBRİT SİSTEM
   Future<Map<String, dynamic>> generateMealPlan(
       Map<String, dynamic> userProfile) async {
-    try {
-      print('Beslenme planı isteniyor: $userProfile');
+    print('🤖 Hibrit sistem ile beslenme planı isteniyor: $userProfile');
 
-      final response = await _dio.post(
-        '/zindeai-router',
-        data: {
-          'requestType': 'plan', // Edge function'daki requestType
-          'data': userProfile, // Edge function'daki data
-        },
-      );
+    // Hibrit AI'yi kullan
+    final result = await _hybridMealAI.generateMealPlan(
+      userProfile: userProfile,
+    );
 
-      print('API Response: ${response.data}');
+    print(
+        '📊 Hibrit sonuç: ${result['source']}, fallback: ${result['fallback']}');
 
-      if (response.data['success'] == true && response.data['plan'] != null) {
-        return response.data['plan']; // Direkt plan objesini döndür
-      } else {
-        throw Exception('Beslenme planı oluşturulamadı');
-      }
-    } on DioException catch (e) {
-      print('API Hatası: ${e.response?.data}');
-      throw Exception('Beslenme planı hatası: ${e.message}');
+    // Fallback durumu varsa ek bilgi ver
+    if (result['fallback'] == true) {
+      print('⚠️ Offline mod aktif - Local database kullanılıyor');
     }
+
+    // Gemini formatında döndür (UI uyumlu)
+    return {
+      'plan': result['plan'],
+      'isFallback': result['fallback'] ?? false,
+      'fallbackMessage': result['fallback_message'],
+      'source': result['source'],
+    };
   }
 
   // ANTRENMAN PLANI İÇİN
@@ -52,8 +60,8 @@ class ApiService {
     try {
       print('Antrenman planı isteniyor: $userProfile');
 
-      final response = await _dio.post(
-        '/zindeai-router',
+      final response = await theDio.post(
+        '/functions/v1/zindeai-router',
         data: {
           'requestType': 'antrenman', // Edge function'daki requestType
           'data': userProfile, // Edge function'daki data

@@ -366,11 +366,11 @@ class _ProfileScreenState extends State<ProfileScreen> {
                             ),
                             items: [
                               'Kilo Verme',
+                              'Kilo Alma',
                               'Kas Kazanma + Kilo Alma',
                               'Kas Kazanma + Kilo Verme',
                               'Bakım',
-                              'Güç Kazanma',
-                              'Dayanıklılık'
+                              'Güç Kazanma'
                             ].map((String value) {
                               return DropdownMenuItem<String>(
                                 value: value,
@@ -571,19 +571,19 @@ class _ProfileScreenState extends State<ProfileScreen> {
   String _mapGoalToAPI(String goal) {
     switch (goal) {
       case 'Kilo Verme':
-        return 'fat_loss';
+        return 'lose';
+      case 'Kilo Alma':
+        return 'gain';
       case 'Kas Kazanma + Kilo Alma':
-        return 'muscle_gain';
+        return 'gain_muscle_gain_weight';
       case 'Kas Kazanma + Kilo Verme':
-        return 'recomp';
+        return 'gain_muscle_loss_fat';
       case 'Bakım':
-        return 'maintenance';
+        return 'maintain';
       case 'Güç Kazanma':
-        return 'strength';
-      case 'Dayanıklılık':
-        return 'endurance';
+        return 'gain_strength';
       default:
-        return 'maintenance';
+        return 'maintain';
     }
   }
 

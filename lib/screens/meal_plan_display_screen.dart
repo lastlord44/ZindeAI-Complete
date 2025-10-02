@@ -3,12 +3,20 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'dart:convert';
 import 'meal_tracker_screen.dart';
 import 'shopping_list_screen.dart';
+import '../widgets/fallback_banner.dart';
 
 class MealPlanDisplayScreen extends StatefulWidget {
   final Map<String, dynamic> mealPlan;
   final Map<String, dynamic>? userProfile;
+  final bool isFallback; // YENİ
+  final String? fallbackMessage; // YENİ
 
-  MealPlanDisplayScreen({required this.mealPlan, this.userProfile});
+  MealPlanDisplayScreen({
+    required this.mealPlan,
+    this.userProfile,
+    this.isFallback = false, // Varsayılan false
+    this.fallbackMessage,
+  });
 
   @override
   _MealPlanDisplayScreenState createState() => _MealPlanDisplayScreenState();
@@ -38,11 +46,14 @@ class _MealPlanDisplayScreenState extends State<MealPlanDisplayScreen> {
   void loadMealStatus() async {
     final prefs = await SharedPreferences.getInstance();
     setState(() {
-      // Öğün durumlarını yükle
-      widget.mealPlan['days']?.forEach((day) {
+      // Öğün durumlarını yükle - Hibrit sisteme uygun
+      final days = widget.mealPlan['days'] as List<dynamic>;
+      days.forEach((day) {
         final dayName = day['dayName'] ?? 'Gün ${day['day']}';
-        ['sabah', 'ara_ogun_1', 'ogle', 'ara_ogun_2', 'aksam'].forEach((meal) {
-          final key = '${dayName}_$meal';
+        final meals = day['meals'] as List<dynamic>;
+        meals.forEach((meal) {
+          final mealName = meal['mealName'] as String;
+          final key = '${dayName}_$mealName';
           mealStatus[key] = prefs.getBool(key) ?? false;
         });
       });
@@ -82,7 +93,7 @@ class _MealPlanDisplayScreenState extends State<MealPlanDisplayScreen> {
     }
 
     final currentDay = days[selectedDayIndex];
-    final meals = currentDay['meals'] ?? {};
+    final meals = currentDay['meals'] as List<dynamic>?; // Hibrit sisteme uygun
     final dayName = currentDay['dayName'] ?? 'Gün ${currentDay['day']}';
 
     // Bugünün gününü al (0 = Pazartesi)
@@ -122,6 +133,23 @@ class _MealPlanDisplayScreenState extends State<MealPlanDisplayScreen> {
       ),
       body: Column(
         children: [
+          // FALLBACK BANNER (Varsa göster)
+          if (widget.isFallback && widget.fallbackMessage != null)
+            FallbackBanner(
+              message: widget.fallbackMessage!,
+              onRetry: () async {
+                // Tekrar deneme için geri git
+                Navigator.pop(context);
+                // Parent ekrana 'tekrar denesin' mesajı gönder
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: Text('🔄 AI servisi tekrar deneniyor...'),
+                    backgroundColor: Colors.blue,
+                  ),
+                );
+              },
+            ),
+
           // Profil özeti
           if (widget.userProfile != null)
             Container(
@@ -141,11 +169,15 @@ class _MealPlanDisplayScreenState extends State<MealPlanDisplayScreen> {
                         '${widget.userProfile!['target_calories'] ?? 0} kcal',
                         Colors.orange),
                     SizedBox(width: 8),
-                    _buildProfileChip(Icons.monitor_weight,
-                        '${widget.userProfile!['weight'] ?? 0}kg', Colors.green),
+                    _buildProfileChip(
+                        Icons.monitor_weight,
+                        '${widget.userProfile!['weight'] ?? 0}kg',
+                        Colors.green),
                     SizedBox(width: 8),
-                    _buildProfileChip(Icons.restaurant,
-                        widget.userProfile!['diet_type'] ?? 'Diyet', Colors.blue),
+                    _buildProfileChip(
+                        Icons.restaurant,
+                        widget.userProfile!['diet_type'] ?? 'Diyet',
+                        Colors.blue),
                   ],
                 ),
               ),
@@ -162,8 +194,13 @@ class _MealPlanDisplayScreenState extends State<MealPlanDisplayScreen> {
                 final isSelected = index == selectedDayIndex;
                 final isToday = index == todayIndex;
 
-                // Tarihi hesapla (bugünden başlayarak)
-                final dayDate = today.add(Duration(days: index - todayIndex));
+                // Tarihi hesapla (bugünden itibaren 7 gün)
+                final dayOffset = (index >= todayIndex)
+                    ? (index - todayIndex) // Bugünden sonraki günler
+                    : (index +
+                        7 -
+                        todayIndex); // Geçmiş günleri sonraki haftaya kaydır
+                final dayDate = today.add(Duration(days: dayOffset));
                 final dateStr = '${dayDate.day}/${dayDate.month}';
 
                 return GestureDetector(
@@ -173,8 +210,8 @@ class _MealPlanDisplayScreenState extends State<MealPlanDisplayScreen> {
                     });
                   },
                   child: Container(
-                    width: 100,
-                    margin: EdgeInsets.all(8),
+                    width: 80,
+                    margin: EdgeInsets.all(4),
                     padding: EdgeInsets.symmetric(vertical: 8),
                     decoration: BoxDecoration(
                       color: isToday
@@ -241,34 +278,37 @@ class _MealPlanDisplayScreenState extends State<MealPlanDisplayScreen> {
             child: Row(
               mainAxisAlignment: MainAxisAlignment.spaceAround,
               children: [
+                _buildMacroCard('Kalori',
+                    '${currentDay['dailyTotals']?['calories'] ?? 0}', 'kcal'),
+                _buildMacroCard('Protein',
+                    '${currentDay['dailyTotals']?['protein'] ?? 0}', 'g'),
                 _buildMacroCard(
-                    'Kalori', '${currentDay['totalCalories'] ?? 0}', 'kcal'),
+                    'Karb', '${currentDay['dailyTotals']?['carbs'] ?? 0}', 'g'),
                 _buildMacroCard(
-                    'Protein', '${currentDay['macros']?['protein'] ?? 0}', 'g'),
-                _buildMacroCard(
-                    'Karb', '${currentDay['macros']?['carbs'] ?? 0}', 'g'),
-                _buildMacroCard(
-                    'Yağ', '${currentDay['macros']?['fats'] ?? 0}', 'g'),
+                    'Yağ', '${currentDay['dailyTotals']?['fat'] ?? 0}', 'g'),
               ],
             ),
           ),
 
           // Öğünler listesi
           Expanded(
-            child: ListView(
-              padding: EdgeInsets.all(16),
-              children: [
-                _buildMealCard('Sabah', meals['sabah'], dayName),
-                SizedBox(height: 12),
-                _buildMealCard('Ara Öğün 1', meals['ara_ogun_1'], dayName),
-                SizedBox(height: 12),
-                _buildMealCard('Öğle', meals['ogle'], dayName),
-                SizedBox(height: 12),
-                _buildMealCard('Ara Öğün 2', meals['ara_ogun_2'], dayName),
-                SizedBox(height: 12),
-                _buildMealCard('Akşam', meals['aksam'], dayName),
-              ],
-            ),
+            child: meals != null
+                ? ListView(
+                    padding: EdgeInsets.all(16),
+                    children: meals.map<Widget>((meal) {
+                      return Column(
+                        children: [
+                          _buildMealCard(
+                            meal['mealName'] ?? 'Öğün',
+                            meal,
+                            dayName,
+                          ),
+                          SizedBox(height: 12),
+                        ],
+                      );
+                    }).toList(),
+                  )
+                : Center(child: Text('Bu gün için öğün bulunamadı')),
           ),
         ],
       ),
@@ -310,9 +350,19 @@ class _MealPlanDisplayScreenState extends State<MealPlanDisplayScreen> {
                 color: Colors.green[700],
               ),
             ),
-            subtitle: Text(
-              meal['name'] ?? '',
-              style: TextStyle(fontSize: 14),
+            subtitle: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  meal['recipeName'] ?? meal['name'] ?? '',
+                  style: TextStyle(fontSize: 14),
+                ),
+                Text(
+                  meal['portion_text'] ??
+                      '${(meal['grams'] ?? 200).toStringAsFixed(0)} g porsiyon',
+                  style: TextStyle(fontSize: 12, color: Colors.grey[600]),
+                ),
+              ],
             ),
             trailing: IconButton(
               icon: Icon(
@@ -334,10 +384,14 @@ class _MealPlanDisplayScreenState extends State<MealPlanDisplayScreen> {
               mainAxisAlignment: MainAxisAlignment.spaceAround,
               children: [
                 _buildNutrientBadge(
-                    '${meal['calories'] ?? 0} kcal', Colors.orange),
-                _buildNutrientBadge('P: ${meal['protein'] ?? 0}g', Colors.red),
+                    '${meal['totalCalories']?.toStringAsFixed(0) ?? meal['calories'] ?? 0} kcal',
+                    Colors.orange),
+                _buildNutrientBadge(
+                    'P: ${meal['totalProtein']?.toStringAsFixed(0) ?? meal['protein'] ?? 0}g',
+                    Colors.red),
                 _buildNutrientBadge('K: ${meal['carbs'] ?? 0}g', Colors.blue),
-                _buildNutrientBadge('Y: ${meal['fats'] ?? 0}g', Colors.purple),
+                _buildNutrientBadge(
+                    'Y: ${meal['fat'] ?? meal['fats'] ?? 0}g', Colors.purple),
               ],
             ),
           ),
@@ -375,8 +429,9 @@ class _MealPlanDisplayScreenState extends State<MealPlanDisplayScreen> {
                         ),
                       ),
                       SizedBox(height: 12),
-                      // Malzemeler listesi
-                      ...(meal['ingredients'] as List).map((ingredient) {
+                      // Malzemeler listesi - Hibrit sisteme uygun
+                      ...(meal['ingredients'] as List<String>)
+                          .map((ingredient) {
                         return Padding(
                           padding: EdgeInsets.symmetric(vertical: 2),
                           child: Row(
@@ -385,7 +440,7 @@ class _MealPlanDisplayScreenState extends State<MealPlanDisplayScreen> {
                                   size: 16, color: Colors.grey),
                               SizedBox(width: 4),
                               Text(
-                                '${ingredient['name']} - ${ingredient['amount']}',
+                                ingredient, // Direkt string olarak kullan
                                 style: TextStyle(fontSize: 13),
                               ),
                             ],

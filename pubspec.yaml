@@ -46,3 +46,9 @@ dev_dependencies:
 
 flutter:
   uses-material-design: true
+  
+  # Assets
+  assets:
+    - assets/
+    - assets/meal_gold_10000.json
+    - assets/meal_gold_10000_clean.json
