@@ -642,18 +642,19 @@ class _ProfileScreenState extends State<ProfileScreen> {
           MaterialPageRoute(
             builder: (context) => PlanSelectionScreen(
                 profile: UserProfile(
-              sex: _gender == 'Erkek' ? 'male' : 'female',
+              sex: _gender == 'Erkek' ? Sex.male : Sex.female,
               age: int.parse(_ageController.text),
               heightCm: int.parse(_heightController.text),
               weightKg: double.parse(_weightController.text),
-              goal: _mapGoalToAPI(_primaryGoal),
-              activity: _mapActivityToAPI(_activityLevel),
+              goal: _mapGoalToEnum(_primaryGoal),
+              activity: _mapActivityToEnum(_activityLevel),
               dietFlags: [_dietType.toLowerCase()],
               training: TrainingPreferences(
-                daysPerWeek: _workoutDays,
                 days: ['Monday', 'Wednesday', 'Friday'],
-                splitPreference: 'AUTO',
-                mode: 'gym',
+                daysPerWeek: _workoutDays,
+                mode: TrainingMode.gym,
+                splitPreference: SplitPreference.fullBody,
+                equipment: const [],
               ),
             )),
           ),
@@ -666,6 +667,39 @@ class _ProfileScreenState extends State<ProfileScreen> {
           ),
         );
       }
+    }
+  }
+
+  // Enum conversion methods
+  Goal _mapGoalToEnum(String goal) {
+    switch (goal) {
+      case 'Kilo Verme':
+        return Goal.cut;
+      case 'Kilo Alma':
+        return Goal.bulk;
+      case 'Kas Kazanma + Kilo Alma':
+        return Goal.gain_muscle_gain_weight;
+      case 'Kas Kazanma + Yağ Kaybetme':
+        return Goal.gain_muscle_loss_fat;
+      case 'Güç Kazanma':
+        return Goal.gain_strength;
+      default:
+        return Goal.maintain;
+    }
+  }
+
+  Activity _mapActivityToEnum(String activity) {
+    switch (activity) {
+      case 'Hareketsiz':
+        return Activity.sedentary;
+      case 'Az Aktif':
+        return Activity.light;
+      case 'Orta Aktif':
+        return Activity.moderate;
+      case 'Çok Aktif':
+        return Activity.very_active;
+      default:
+        return Activity.moderate;
     }
   }
 

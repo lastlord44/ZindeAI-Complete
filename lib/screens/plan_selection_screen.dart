@@ -1,10 +1,14 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'dart:convert';
 import '../models/user_profile.dart';
 import '../services/api_service.dart';
+import '../services/hybrid_meal_ai.dart';
 import '../utils/logger.dart';
+import '../utils/wire.dart';
+import '../utils/json_safe.dart';
 import 'meal_plan_display_screen.dart';
 import 'workout_plan_display_screen.dart';
 
@@ -47,16 +51,12 @@ class PlanSelectionScreen extends StatelessWidget {
   String _getFitnessLevel() {
     // Aktivite seviyesine göre fitness level belirle
     switch (profile.activity) {
-      case 'low':
-      case 'sedentary':
-      case 'light':
+      case Activity.sedentary:
+      case Activity.light:
         return 'beginner';
-      case 'high':
-      case 'very_active':
-      case 'extra_active':
+      case Activity.moderate:
+      case Activity.very_active:
         return 'advanced';
-      default:
-        return 'intermediate';
     }
   }
 
@@ -64,7 +64,7 @@ class PlanSelectionScreen extends StatelessWidget {
   int _calculateCalories(UserProfile profile) {
     // BMR hesapla (Mifflin-St Jeor)
     double bmr;
-    if (profile.sex == 'male') {
+    if (profile.sex == Sex.male) {
       bmr = (10 * profile.weightKg) +
           (6.25 * profile.heightCm) -
           (5 * profile.age) +
@@ -79,39 +79,32 @@ class PlanSelectionScreen extends StatelessWidget {
     // TDEE hesapla (aktivite çarpanı)
     double activityMultiplier;
     switch (profile.activity) {
-      case 'sedentary':
-        activityMultiplier = 1.2;
-        break;
-      case 'light':
+      case Activity.sedentary:
         activityMultiplier = 1.375;
         break;
-      case 'moderate':
+      case Activity.light:
         activityMultiplier = 1.55;
         break;
-      case 'very_active':
+      case Activity.moderate:
         activityMultiplier = 1.725;
         break;
-      case 'extra_active':
+      case Activity.very_active:
         activityMultiplier = 1.9;
-        break;
-      default:
-        activityMultiplier = 1.55;
     }
 
     double tdee = bmr * activityMultiplier;
 
     // Hedefe göre kalori ayarla
     switch (profile.goal) {
-      case 'fat_loss':
+      case Goal.cut:
+      case Goal.gain_muscle_loss_fat:
         return (tdee * 0.8).round(); // %20 açık
-      case 'muscle_gain':
+      case Goal.bulk:
+      case Goal.gain_muscle_gain_weight:
         return (tdee * 1.15).round(); // %15 fazla
-      case 'recomp':
-        return (tdee * 0.95).round(); // Hafif açık
-      case 'strength':
+      case Goal.gain_strength:
         return (tdee * 1.10).round(); // %10 fazla
-      case 'maintenance':
-      default:
+      case Goal.maintain:
         return tdee.round();
     }
   }
@@ -241,22 +234,14 @@ class PlanSelectionScreen extends StatelessWidget {
                         tag: 'PlanSelection');
                     try {
                       final apiService = context.read<ApiService>();
-                      final workoutPlan = await apiService.generateWorkoutPlan({
-                        'userId':
-                            'user_${DateTime.now().millisecondsSinceEpoch}',
-                        'age': profile.age,
-                        'gender': profile.sex,
-                        'weight': profile.weightKg,
-                        'height': profile.heightCm.toDouble(),
-                        'fitnessLevel': _getFitnessLevel(),
-                        'goal': profile.goal,
-                        'mode': profile.training.mode,
-                        'daysPerWeek': profile.training.daysPerWeek,
-                        'preferredSplit': profile.training.splitPreference ==
-                                'AUTO'
-                            ? null
-                            : profile.training.splitPreference.toLowerCase(),
-                      });
+                      final payload = buildPlanRequest(profile);
+                      payload['userId'] =
+                          'user_${DateTime.now().millisecondsSinceEpoch}';
+                      payload['height'] = profile.heightCm.toDouble();
+                      payload['fitnessLevel'] = _getFitnessLevel();
+
+                      final workoutPlan =
+                          await apiService.generateWorkoutPlan(payload);
 
                       if (context.mounted) {
                         final prefs = await SharedPreferences.getInstance();
@@ -276,7 +261,8 @@ class PlanSelectionScreen extends StatelessWidget {
                           ),
                         );
                       }
-                    } catch (e) {
+                    } catch (e, st) {
+                      debugPrint('🚨 Workout plan error: $e\n$st');
                       if (context.mounted) {
                         ScaffoldMessenger.of(context).showSnackBar(
                           SnackBar(
@@ -350,23 +336,19 @@ class PlanSelectionScreen extends StatelessWidget {
                         '🎯 KULLANICI BİLGİLERİ: ${profile.weightKg}kg, ${profile.goal}');
 
                     // Beslenme planı oluştur - HİBRİT SİSTEM İLE
-                    final mealPlanResult = await apiService.generateMealPlan({
-                      'goal': profile.goal, // muscle_gain, fat_loss, etc.
-                      'age': profile.age,
-                      'sex': profile.sex, // male/female
-                      'weight_kg': profile.weightKg,
-                      'weight':
-                          profile.weightKg, // Hem weight_kg hem weight gönder
-                      'height_cm': profile.heightCm,
-                      'activity_level':
-                          profile.activity, // moderate, high, etc.
-                      'diet': profile.dietFlags.isNotEmpty
-                          ? profile.dietFlags.first
-                          : 'balanced',
-                      'daysOfWeek': 7,
-                      'calories': calories,
-                      'primary_goal': profile.goal, // Ekstra güvenlik
-                    });
+                    final payload = buildPlanRequest(profile);
+                    payload['weight'] =
+                        profile.weightKg; // Hem weight_kg hem weight gönder
+                    payload['diet'] = profile.dietFlags.isNotEmpty
+                        ? profile.dietFlags.first
+                        : 'balanced';
+                    payload['daysOfWeek'] = 7;
+                    payload['calories'] = calories;
+                    payload['primary_goal'] =
+                        payload['goal']; // Ekstra güvenlik
+
+                    final mealPlanResult =
+                        await apiService.generateMealPlan(payload);
 
                     // İlk istek tamamlandı, loading'i kapat
                     if (context.mounted) Navigator.pop(context);
@@ -381,13 +363,39 @@ class PlanSelectionScreen extends StatelessWidget {
                       }
                     }
 
+                    // result API'den dönen her şey olabilir (null/string/list/map)
+                    final resMap = asMap(mealPlanResult);
+
                     // Hibrit bilgilerini al
-                    final bool isFallback =
-                        mealPlanResult['isFallback'] ?? false;
-                    final String? fallbackMessage =
-                        mealPlanResult['fallbackMessage'];
-                    final Map<String, dynamic> mealPlan =
-                        mealPlanResult['plan'];
+                    final bool isFallback = resMap['isFallback'] ?? false;
+                    final String? fallbackMessage = resMap['fallbackMessage'];
+
+                    // Bazı backend'ler farklı kök anahtar kullanır:
+                    final planMap = asMap(
+                        resMap['plan'] ?? resMap['data'] ?? resMap['result']);
+
+                    // PLAN NULL İSE → LOKAL FALLBACK (AI KAPALI DB-ENGINE)
+                    print('🔍 planMap kontrolü: $planMap');
+                    print('🔍 planMap.isEmpty: ${planMap.isEmpty}');
+
+                    if (planMap.isEmpty) {
+                      print(
+                          '✅ fallback çalışıyor - generateMealPlan çağırılıyor');
+                      final localPlanResponse =
+                          await HybridMealAI().generateMealPlan(profile);
+                      print('🔍 localPlanResponse: $localPlanResponse');
+
+                      // HybridMealAI response'u mealPlan içine sarılı: {success: true, mealPlan: {...}}
+                      final actualMealPlan =
+                          localPlanResponse['mealPlan'] ?? localPlanResponse;
+                      print('🔍 actualMealPlan: $actualMealPlan');
+
+                      _openLocalPlan(context, actualMealPlan, profile);
+                      return;
+                    }
+
+                    final Map<String, dynamic> mealPlan = planMap;
+                    print('✅ normal flow - mealPlan: $mealPlan');
 
                     await Navigator.push(
                       context,
@@ -411,13 +419,15 @@ class PlanSelectionScreen extends StatelessWidget {
                         'weight': profile.weightKg,
                         'height': profile.heightCm.toDouble(),
                         'fitnessLevel': _getFitnessLevel(),
-                        'goal': profile.goal,
-                        'mode': profile.training.mode,
+                        'goal': profile.goal.toString().split('.').last,
+                        'mode':
+                            profile.training.mode.toString().split('.').last,
                         'daysPerWeek': profile.training.daysPerWeek,
-                        'preferredSplit': profile.training.splitPreference ==
-                                'AUTO'
-                            ? null
-                            : profile.training.splitPreference.toLowerCase(),
+                        'preferredSplit': profile.training.splitPreference
+                            .toString()
+                            .split('.')
+                            .last
+                            .toLowerCase(),
                       });
 
                       final prefs = await SharedPreferences.getInstance();
@@ -437,7 +447,8 @@ class PlanSelectionScreen extends StatelessWidget {
                         ),
                       );
                     }
-                  } catch (e) {
+                  } catch (e, st) {
+                    debugPrint('🚨 Meal plan error: $e\n$st');
                     if (context.mounted) {
                       Navigator.pop(context);
                       ScaffoldMessenger.of(context).showSnackBar(
@@ -467,6 +478,30 @@ class PlanSelectionScreen extends StatelessWidget {
               ),
             ),
           ],
+        ),
+      ),
+    );
+  }
+
+  // LOCAL FALLBACK HELPER
+  static void _openLocalPlan(BuildContext context,
+      Map<String, dynamic> mealPlan, UserProfile profile) {
+    
+    // Profile'i target calories ile expand et
+    final userProfile = profile.toJson();
+    userProfile['target_calories'] = profile.targetKcal().round();
+    userProfile['primary_goal'] = profile.goal.toString().split('.').last;
+    userProfile['weight'] = profile.weightKg;
+    userProfile['diet_type'] = profile.dietFlags.isNotEmpty ? profile.dietFlags.first : 'Dengeli';
+    
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => MealPlanDisplayScreen(
+          mealPlan: mealPlan,
+          userProfile: userProfile,
+          isFallback: true,
+          fallbackMessage: "AI servisi kullanılamadı, yerel plan oluşturuldu",
         ),
       ),
     );

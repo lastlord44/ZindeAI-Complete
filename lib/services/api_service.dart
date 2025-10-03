@@ -1,5 +1,7 @@
 import 'package:dio/dio.dart';
 import 'hybrid_meal_ai.dart';
+import '../models/user_profile.dart';
+import '../utils/json_safe.dart';
 
 class ApiService {
   static const String supabaseUrl = 'https://uhibpbwgvnvasxlvcohr.supabase.co';
@@ -21,10 +23,7 @@ class ApiService {
     );
 
     // Hibrit AI'yi başlat
-    _hybridMealAI = HybridMealAI(
-      dio: theDio,
-      supabaseUrl: supabaseUrl,
-    );
+    _hybridMealAI = HybridMealAI();
   }
 
   // BESLENME PLANI İÇİN - HİBRİT SİSTEM
@@ -32,9 +31,17 @@ class ApiService {
       Map<String, dynamic> userProfile) async {
     print('🤖 Hibrit sistem ile beslenme planı isteniyor: $userProfile');
 
+    // UserProfile'ı parse et
+    final profile = _parseUserProfile(userProfile);
+
+    // Hedef kalori kontrolü
+    final targetKcal = profile.targetKcal();
+    print('🎯 KULLANICI BİLGİLERİ: ${profile.weightKg}kg, ${profile.goal}');
+    print(' HESAPLANAN KALORİ: ${targetKcal.round()}');
+
     // Hibrit AI'yi kullan
     final result = await _hybridMealAI.generateMealPlan(
-      userProfile: userProfile,
+      profile,
     );
 
     print(
@@ -80,5 +87,14 @@ class ApiService {
       print('API Hatası: ${e.response?.data}');
       throw Exception('Antrenman planı hatası: ${e.message}');
     }
+  }
+
+  // NULL → Map guard'lı
+  UserProfile _parseUserProfile(dynamic j) {
+    // j Map değilse (null, String, List ...) sağlamlaştır
+    if (j is String) {
+      return UserProfile.fromJson(decodeMapOrEmpty(j));
+    }
+    return UserProfile.fromJson(asMap(j));
   }
 }

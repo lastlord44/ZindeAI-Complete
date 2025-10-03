@@ -29,6 +29,16 @@ class _MealPlanDisplayScreenState extends State<MealPlanDisplayScreen> {
   @override
   void initState() {
     super.initState();
+    
+    // Bugünün gününü al (Pazartesi=1, Pazar=7)
+    final today = DateTime.now();
+    final todayIndex = (today.weekday - 1) % 7; // 0=Pazartesi, 6=Pazar
+    
+    // Seçili günü bugün yap
+    selectedDayIndex = todayIndex;
+    print('📅 Bugün: ${today.weekday} (dayIndex: $todayIndex)');
+    print('📅 Seçili gün: $selectedDayIndex');
+    
     loadMealStatus();
     _savePlan();
   }
